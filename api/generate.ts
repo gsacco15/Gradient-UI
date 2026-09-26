@@ -2,7 +2,8 @@
 // Needs ANTHROPIC_API_KEY in the Vercel project's environment variables.
 // Without it the endpoint answers 503 and the app uses its built-in keyword generator.
 import Anthropic from '@anthropic-ai/sdk';
-import { AI_SCHEMA, MAX_PROMPT, SYSTEM_PROMPT, sanitizeAi } from '../src/lib/aiSchema';
+// The explicit .js extension is required: Vercel runs this file as a native ES module.
+import { AI_SCHEMA, MAX_PROMPT, SYSTEM_PROMPT, sanitizeAi } from '../src/lib/aiSchema.js';
 
 // Best-effort per-instance rate limit so a public site can't be used to run up the bill.
 const WINDOW_MS = 60_000;
@@ -19,6 +20,11 @@ function limited(ip: string): boolean {
 }
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+
+/** Health check: open /api/generate in a browser to see whether AI is configured. */
+export function GET(): Response {
+  return json({ ok: true, configured: Boolean(process.env.ANTHROPIC_API_KEY) });
+}
 
 export async function POST(request: Request): Promise<Response> {
   if (!process.env.ANTHROPIC_API_KEY) return json({ error: 'AI generation is not configured on this deployment.' }, 503);

@@ -46,7 +46,8 @@ export async function generateFromText(prompt: string, signal?: AbortSignal): Pr
     // Errors worth showing (rate limit, refusal). Everything else falls back quietly.
     if (res.status === 429 || res.status === 422) throw new Error(data?.error ?? 'Try again in a moment.');
     const local = localTextGradient(prompt);
-    return { ...local, notice: res.status === 503 ? 'AI is not configured on this site — used the built-in generator.' : 'AI unavailable — used the built-in generator.' };
+    const why = data?.error ?? `HTTP ${res.status}`;
+    return { ...local, notice: res.status === 503 ? `AI is not configured on this site (${why}) — used the built-in generator.` : `AI unavailable (${why}) — used the built-in generator.` };
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
     if (e instanceof Error && !(e instanceof TypeError)) throw e;
