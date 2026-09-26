@@ -1,6 +1,7 @@
 // Export panel: image, video, code and project.
 import { useMemo, useRef, useState } from 'react';
 import { cssCaveats, download, slug, toCSS, toJSON, toSVG, toTailwind } from '../lib/exportCode';
+import { toEmbed } from '../lib/embed';
 import { gradientKey } from '../lib/gradient';
 import { shareLink } from '../lib/share';
 import { canEncode, exportVideo, type VideoFormat } from '../lib/video';
@@ -249,11 +250,12 @@ function VideoTab() {
 
 function CodeTab() {
   const g = useStore((s) => s.gradient);
-  const [kind, setKind] = useState<'css' | 'tailwind' | 'svg'>('css');
+  const [kind, setKind] = useState<'css' | 'tailwind' | 'svg' | 'embed'>(g.interact.mode !== 'none' ? 'embed' : 'css');
   const key = gradientKey(g);
   const code = useMemo(() => {
     if (kind === 'css') return toCSS(g);
     if (kind === 'tailwind') return toTailwind(g);
+    if (kind === 'embed') return toEmbed(g);
     return toSVG(g, 1200, 800, renderDataURL(g, 600, 400, key)) || '';
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, key, g.name, g.place, g.time]);
@@ -269,13 +271,14 @@ function CodeTab() {
   return (
     <>
       <div className="opt-row">
-        {(['css', 'tailwind', 'svg'] as const).map((k) => (
+        {(['css', 'tailwind', 'svg', 'embed'] as const).map((k) => (
           <button key={k} className={`opt inline ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>
             {k.toUpperCase()}
           </button>
         ))}
       </div>
-      {kind !== 'svg' && caveats.length > 0 && (
+      {kind === 'embed' && <p className="hint">A live WebGL gradient for any website — motion and cursor effects included. Paste it into your HTML; it falls back to plain CSS where WebGL is unavailable.</p>}
+      {(kind === 'css' || kind === 'tailwind') && caveats.length > 0 && (
         <ul className="caveats">
           {caveats.map((c) => (
             <li key={c}>{c}</li>

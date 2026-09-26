@@ -45,6 +45,11 @@ uniform float u_phase;       // 0..1 loop phase
 uniform float u_seed;
 uniform float u_pxScale;     // device-independent grain / dither size
 
+uniform vec2 u_mouse;         // pointer, uv space (y down)
+uniform float u_presence;     // 0..1, eases in and out as the pointer enters/leaves
+uniform float u_react;        // + follow, - repel
+uniform int u_lens;           // 1 = lens bulge instead of pull/push
+
 uniform sampler2D u_img;
 uniform float u_scanPos;
 uniform int u_scanDir;       // 0 columns -> horizontal bands, 1 rows -> vertical bands
@@ -170,6 +175,12 @@ vec3 evalLab(vec2 uv) {
       float sz = u_size[i];
       if (u_mode == 1) xy += vec2(sin(T + fi * 1.7), cos(T + fi * 2.3)) * 0.12 * u_speed;
       if (u_mode == 3) sz *= 1.0 + 0.35 * u_speed * sin(T + fi * 1.3);
+      if (u_presence > 0.001 && u_lens == 0) {
+        vec2 dm = (u_mouse - xy) * vec2(aspect(), 1.0);
+        float f = exp(-dot(dm, dm) / 0.09);
+        xy += (u_mouse - xy) * f * u_react * u_presence * 0.75;
+        sz *= 1.0 + f * abs(u_react) * u_presence * 0.25;
+      }
       vec2 d = p - xy * vec2(aspect(), 1.0);
       float w = exp(-dot(d, d) / max(sz * sz * 0.5, 1e-4));
       acc += u_col[i] * w;
@@ -220,6 +231,13 @@ void main() {
     float cells = mix(160.0, 8.0, pow(u_pixel, 0.6));
     vec2 grid = vec2(cells * aspect(), cells);
     uv = (floor(uv * grid) + 0.5) / grid;
+  }
+  if (u_presence > 0.001 && (u_type != 3 || u_lens == 1)) {
+    // Pointer warp: pinch toward / push away from the cursor, or a soft lens bulge.
+    vec2 d = (uv - u_mouse) * vec2(aspect(), 1.0);
+    float f = exp(-dot(d, d) / 0.06);
+    float k = u_lens == 1 ? -0.45 * abs(u_react) : 0.5 * u_react;
+    uv -= (uv - u_mouse) * f * k * u_presence;
   }
   if (u_clouds > 0.001) {
     vec2 w = vec2(fbm(uv * 3.0 + 1.7), fbm(uv * 3.0 + 9.2)) - 0.5;

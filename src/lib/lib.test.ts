@@ -125,3 +125,33 @@ describe('palette extraction', () => {
     expect(pal).toContain('#1E3CC8');
   });
 });
+
+describe('v0.2 features', () => {
+  it('builds a self-contained embed with the shader and uniforms', async () => {
+    const { toEmbed } = await import('./embed');
+    const g = makeGradient({ name: 'SOLAR WIND', place: 'TROMSØ', time: '23:14', type: 'mesh', colors: ['#3DF5A7', '#0B1026'], interact: { mode: 'repel', strength: 0.5 } });
+    const html = toEmbed(g);
+    expect(html).toContain('<canvas');
+    expect(html).toContain('u_react');
+    expect(html).toContain('"react":true');
+    expect(html).toContain('#version 300 es');
+  });
+  it('writes copyable component code for each target', async () => {
+    const { componentCode } = await import('../components/InterfaceView');
+    const g = makeGradient({ name: 'X', place: 'Y', time: '0', colors: ['#000000', '#FFFFFF'] });
+    const style = { radius: 12, shadow: 0, glass: 0, spacing: 1, borderWidth: 2, font: 'sans', textTone: 'auto', surface: 'light' } as const;
+    const def = { id: 'b', label: 'BUTTON', kind: 'button' as const, sample: 'Go' };
+    expect(componentCode(def, 'background', g, style)).toContain('linear-gradient(180deg');
+    expect(componentCode(def, 'border', g, style)).toContain('padding-box');
+    expect(componentCode({ ...def, kind: 'text' }, 'text', g, style)).toContain('background-clip: text');
+  });
+  it('keeps the gradient inside the sheet for every poster layout', async () => {
+    const { gradientRect, POSTER_SIZES } = await import('./poster');
+    for (const { w, h } of Object.values(POSTER_SIZES)) {
+      const r = gradientRect(w, h, { size: 'a3', paper: 'white', layout: 'framed', margin: 0.1, title: '', subtitle: '', notes: true, edition: '' });
+      expect(r.x).toBeGreaterThan(0);
+      expect(r.y + r.h).toBeLessThan(h);
+      expect(r.w).toBeGreaterThan(w / 2);
+    }
+  });
+});

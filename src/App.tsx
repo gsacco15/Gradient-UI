@@ -6,14 +6,17 @@ import { Inspector } from './components/Inspector';
 import { InterfaceInspector, InterfaceView } from './components/InterfaceView';
 import { Library } from './components/Library';
 import { StopBar } from './components/StopBar';
+import { PosterInspector, PosterView } from './components/PosterView';
 import { Thumb } from './components/Thumb';
+import { Welcome } from './components/Welcome';
 import { remix } from './lib/generate';
 import { useStore, type View } from './store';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: 'gradient', label: 'GRADIENT', hint: 'Edit' },
   { id: 'horizon', label: 'HORIZON', hint: 'Photo → film' },
-  { id: 'interface', label: 'INTERFACE', hint: 'See it on UI' },
+  { id: 'interface', label: 'INTERFACE', hint: 'See it on screens' },
+  { id: 'poster', label: 'POSTER', hint: 'Print it' },
 ];
 
 type MobilePane = 'canvas' | 'library' | 'inspector';
@@ -23,6 +26,7 @@ export default function App() {
   const exportOpen = useStore((s) => s.exportOpen);
   const remixOpen = useStore((s) => s.remixOpen);
   const toast = useStore((s) => s.toast);
+  const welcomeOpen = useStore((s) => s.welcomeOpen);
   const [compare, setCompare] = useState(false);
   const [pane, setPane] = useState<MobilePane>('canvas');
 
@@ -39,6 +43,7 @@ export default function App() {
           {view === 'gradient' && <GradientCanvas compare={compare} />}
           {view === 'horizon' && <HorizonView />}
           {view === 'interface' && <InterfaceView />}
+          {view === 'poster' && <PosterView />}
         </div>
         {view === 'gradient' && <StopBar />}
         <nav className="view-tabs">
@@ -54,6 +59,7 @@ export default function App() {
         {view === 'gradient' && <Inspector />}
         {view === 'horizon' && <HorizonInspector />}
         {view === 'interface' && <InterfaceInspector />}
+        {view === 'poster' && <PosterInspector />}
       </aside>
       <nav className="mobile-nav">
         {(['library', 'canvas', 'inspector'] as MobilePane[]).map((p) => (
@@ -64,6 +70,7 @@ export default function App() {
       </nav>
       {exportOpen && <ExportDialog />}
       {remixOpen && <RemixDialog />}
+      {welcomeOpen && <Welcome />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
@@ -79,7 +86,7 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
     <header className="topbar">
       <div className="brand">
         <strong>ATMOS [ STUDIO ]</strong>
-        <span className="muted">SKY &amp; NATURE GRADIENTS / V0.1</span>
+        <span className="muted">SKY &amp; NATURE GRADIENTS / V0.2</span>
       </div>
       <div className="actions">
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">
@@ -114,6 +121,9 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
         <span className="sep" />
         <button onClick={() => s().saveProject()} title="Save to this browser (⌘S)">
           SAVE
+        </button>
+        <button onClick={() => s().set({ welcomeOpen: true })} title="What is this? (?)" aria-label="Help">
+          ?
         </button>
         <button className="primary" onClick={() => s().set({ exportOpen: true })} title="Export (E)">
           EXPORT
@@ -188,8 +198,14 @@ function useShortcuts(setCompare: (v: boolean) => void) {
         return;
       }
       if (typing(e) || mod || e.altKey) return;
-      if (e.key === 'Escape') s.set({ exportOpen: false, remixOpen: false, selected: null });
-      if (s.exportOpen || s.remixOpen) return;
+      if (e.key === 'Escape') s.set({ exportOpen: false, remixOpen: false, welcomeOpen: false, selected: null });
+      if (s.exportOpen || s.remixOpen || s.welcomeOpen) return;
+      if (e.key === '?') s.set({ welcomeOpen: true });
+      if (e.key === '/' && s.view !== 'poster') {
+        e.preventDefault();
+        s.setLeftTab('library');
+        setTimeout(() => document.getElementById('library-search')?.focus(), 0);
+      }
       const k = e.key.toLowerCase();
       if (k === 'r') s.shuffle(e.shiftKey);
       if (k === 'e') s.set({ exportOpen: true });

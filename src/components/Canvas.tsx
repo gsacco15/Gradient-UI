@@ -60,6 +60,8 @@ export function GradientCanvas({ compare }: { compare: boolean }) {
   const exporting = useStore((s) => s.exportOpen);
   const lastPhase = useRef(0);
   const shown = compare ? baseline : gradient;
+  const reactive = shown.interact.mode !== 'none';
+  const pointer = usePointer(wrapRef);
 
   const { renderer, error } = useRenderLoop(
     canvasRef,
@@ -68,10 +70,10 @@ export function GradientCanvas({ compare }: { compare: boolean }) {
       let phase = lastPhase.current;
       if (g.motion.mode !== 'none' && playing) phase = ((t / 1000) / Math.max(1, g.motion.duration)) % 1;
       lastPhase.current = phase;
-      r.render(g, { phase, pxScale: grainScale(r.canvas.width, r.canvas.height), seed: 0 });
+      r.render(g, { phase, pxScale: grainScale(r.canvas.width, r.canvas.height), seed: 0, mouse: reactive ? pointer.step() : undefined });
     },
     [gradient, baseline, compare, playing],
-    shown.motion.mode !== 'none' && playing && !exporting,
+    ((shown.motion.mode !== 'none' && playing) || reactive) && !exporting,
   );
 
   // Sample the rendered colour under a point (for double-click to add).
@@ -107,6 +109,42 @@ export function GradientCanvas({ compare }: { compare: boolean }) {
       {showLabels && <FieldNotes g={compare ? baseline : gradient} />}
     </div>
   );
+}
+
+/**
+ * Smoothed pointer position over an element, for cursor-reactive gradients.
+ * `step()` eases towards the real pointer once per frame and fades presence in/out.
+ */
+export function usePointer(ref: React.RefObject<HTMLElement | null>) {
+  const st = useRef({ x: 0.5, y: 0.5, tx: 0.5, ty: 0.5, presence: 0, inside: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const move = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      st.current.tx = (e.clientX - r.left) / r.width;
+      st.current.ty = (e.clientY - r.top) / r.height;
+      st.current.inside = true;
+    };
+    const leave = () => void (st.current.inside = false);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerdown', move);
+    el.addEventListener('pointerleave', leave);
+    return () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerdown', move);
+      el.removeEventListener('pointerleave', leave);
+    };
+  }, [ref]);
+  return {
+    step() {
+      const s = st.current;
+      s.x += (s.tx - s.x) * 0.12;
+      s.y += (s.ty - s.y) * 0.12;
+      s.presence += ((s.inside ? 1 : 0) - s.presence) * 0.06;
+      return { x: s.x, y: s.y, presence: s.presence };
+    },
+  };
 }
 
 /** Approximate ramp position for a canvas point (used when adding colours by double-click). */

@@ -1,4 +1,4 @@
-import type { ColorPoint, Composition, Gradient, GradientType, Motion, Weather } from '../types';
+import type { ColorPoint, Composition, Gradient, GradientType, Interact, Motion, Weather } from '../types';
 
 let counter = 0;
 export const uid = (p = 'id') => `${p}_${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -16,6 +16,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 
 export const DEFAULT_WEATHER: Weather = { fog: 0, haze: 0.18, frost: 0, heat: 0, clouds: 0, pixel: 0, dusk: 0 };
 export const DEFAULT_MOTION: Motion = { mode: 'none', speed: 0.5, duration: 8 };
+export const DEFAULT_INTERACT: Interact = { mode: 'none', strength: 0.6 };
 
 // Default mesh layout: points spread on a loose ellipse so any palette looks good as a mesh.
 function meshSpot(i: number, n: number): { x: number; y: number } {
@@ -47,6 +48,7 @@ export interface GradientSeed {
   composition?: Partial<Composition>;
   weather?: Partial<Weather>;
   motion?: Partial<Motion>;
+  interact?: Partial<Interact>;
   center?: { x: number; y: number };
 }
 
@@ -66,6 +68,7 @@ export function makeGradient(seed: GradientSeed): Gradient {
     composition: { ...DEFAULT_COMPOSITION, ...seed.composition },
     weather: { ...DEFAULT_WEATHER, ...seed.weather },
     motion: { ...DEFAULT_MOTION, ...seed.motion },
+    interact: { ...DEFAULT_INTERACT, ...seed.interact },
   };
 }
 
@@ -92,6 +95,7 @@ export function hydrateGradient(raw: Partial<Gradient>): Gradient {
     composition: { ...DEFAULT_COMPOSITION, ...raw.composition },
     weather: { ...DEFAULT_WEATHER, ...raw.weather },
     motion: { ...DEFAULT_MOTION, ...raw.motion },
+    interact: { ...DEFAULT_INTERACT, ...raw.interact },
     center: raw.center ?? base.center,
   } as Gradient;
   if (!Array.isArray(g.points) || g.points.length === 0) g.points = base.points;

@@ -18,7 +18,7 @@ function pump() {
   setTimeout(step, 0);
 }
 
-export function useThumb(g: Gradient, w: number, h: number): string | null {
+export function useThumb(g: Gradient, w: number, h: number, priority = false): string | null {
   const key = gradientKey(g);
   const [url, setUrl] = useState<string | null>(null);
   const ref = useRef(key);
@@ -33,7 +33,8 @@ export function useThumb(g: Gradient, w: number, h: number): string | null {
         /* WebGL unavailable */
       }
     };
-    queue.push(job);
+    if (priority) queue.unshift(job);
+    else queue.push(job);
     pump();
     return () => {
       alive = false;
@@ -43,7 +44,7 @@ export function useThumb(g: Gradient, w: number, h: number): string | null {
   return url;
 }
 
-export function Thumb({ g, w = 160, h = 200, className = '' }: { g: Gradient; w?: number; h?: number; className?: string }) {
-  const url = useThumb(g, w, h);
+export function Thumb({ g, w = 160, h = 200, className = '', priority = false }: { g: Gradient; w?: number; h?: number; className?: string; priority?: boolean }) {
+  const url = useThumb(g, w, h, priority);
   return <div className={`thumb ${className}`} style={{ backgroundImage: url ? `url(${url})` : undefined, aspectRatio: `${w} / ${h}` }} />;
 }

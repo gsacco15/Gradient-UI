@@ -13,7 +13,7 @@ npm test         # unit tests
 
 No backend. Projects, favourites and settings are saved in the browser.
 
-## What's in v0.1
+## What's in v0.2
 
 | Area | Features |
 | --- | --- |
@@ -25,13 +25,16 @@ No backend. Projects, favourites and settings are saved in the browser.
 | **Live Sky** | The sky's colour from the sun's real position at your location and time; scrub the day; export a 24-hour loop video |
 | **Photo → Place** | Drop a photo, get a named palette (k-means in Oklab) and six gradient combinations |
 | **Horizon** | Scans an image one pixel line at a time and turns it into a moving horizon film (columns or rows, 24/30/60 fps) |
-| **Interface** | A sample product site. Click any element to put the gradient on its background, border or text. Corners, shadow, glass, spacing, type, light/dark surface, and a live WCAG contrast check |
-| **Tools** | Forecast shuffle (locks respected; shift for a totally new gradient), remix variations, hold-to-compare, undo/redo, named projects with duplicate |
-| **Export** | PNG (up to 8K), SVG, CSS (Oklab-matched stops + grain overlay + tokens), Tailwind v3/v4, MP4/WebM video, project JSON, share links |
+| **Interface** | Three sample screens (landing page, mobile app, dashboard). Click any outlined element to use the gradient as its background, border or text, then copy that component's HTML/CSS. Corners, shadow, glass, spacing, four typefaces, light/dark page, and a live WCAG contrast check |
+| **Poster** | The gradient as a print with field-note typography: A3, 4:5, square or landscape at 300 DPI; white, bone or ink paper; framed or full-bleed; custom title and edition |
+| **Cursor** | Follow, repel or lens — colours react to the mouse, in the studio and in the live embed |
+| **Search** | Find gradients by mood (sunset, fog, neon), place, colour name, hex or type |
+| **Tools** | Welcome guide, forecast shuffle (locks respected; shift for a totally new gradient), remix variations, hold-to-compare, undo/redo, named projects with duplicate |
+| **Export** | PNG (up to 8K), SVG, CSS (Oklab-matched stops + grain overlay + tokens), Tailwind v3/v4, MP4/WebM video, live WebGL embed snippet, project JSON, share links |
 
 ### Shortcuts
 
-`⌘Z` / `⌘⇧Z` undo/redo · `⌘S` save · `R` shuffle (`⇧R` full) · `E` export · hold `C` compare · `L` labels · `Space` play/pause · `Delete` remove selected colour
+`⌘Z` / `⌘⇧Z` undo/redo · `⌘S` save · `R` shuffle (`⇧R` full) · `E` export · hold `C` compare · `L` labels · `/` search · `?` help · `Space` play/pause · `Delete` remove selected colour
 
 ## How it works
 

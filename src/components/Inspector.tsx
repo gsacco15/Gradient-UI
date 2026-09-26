@@ -3,13 +3,14 @@ import { nameForColor } from '../data/names';
 import { normalizeHex } from '../lib/color';
 import { MAX_POINTS, uid } from '../lib/gradient';
 import { selectedPoint, useStore } from '../store';
-import type { FrameShape, GradientType, MotionMode, Symmetry, Weather } from '../types';
+import type { FrameShape, GradientType, InteractMode, MotionMode, Symmetry, Weather } from '../types';
 import { Field, Section, Seg, Slider } from './ui';
 
 const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame'];
 const SYMS: Symmetry[] = ['none', 'mirror', 'quadrant', 'kaleido'];
 const SHAPES: FrameShape[] = ['square', 'circle', 'arch'];
 const MODES: MotionMode[] = ['none', 'drift', 'rotate', 'pulse', 'flow'];
+const REACTS: InteractMode[] = ['none', 'follow', 'repel', 'lens'];
 
 const WEATHER: { key: keyof Weather; label: string; hint: string }[] = [
   { key: 'fog', label: 'FOG', hint: 'Soft atmospheric blur' },
@@ -169,6 +170,18 @@ export function Inspector() {
             <Slider label="LOOP" value={g.motion.duration} min={2} max={30} step={1} format={(v) => `${v}S`} onChange={(v) => update((d) => void (d.motion.duration = v), false)} />
             <p className="hint">Loops are seamless — export as video from EXPORT.</p>
           </>
+        )}
+      </Section>
+
+      <Section title="CURSOR">
+        <Seg options={REACTS} value={g.interact.mode} onChange={(v) => update((d) => void (d.interact.mode = v))} />
+        {g.interact.mode !== 'none' ? (
+          <>
+            <Slider label="STRENGTH" value={g.interact.strength} onChange={(v) => update((d) => void (d.interact.strength = v), false)} />
+            <p className="hint">Move your mouse over the canvas. Export → CODE → EMBED gives you a live snippet for your own site.</p>
+          </>
+        ) : (
+          <p className="hint">Make the gradient react to the mouse — colours follow it, flee it, or swell under it.</p>
         )}
       </Section>
     </div>

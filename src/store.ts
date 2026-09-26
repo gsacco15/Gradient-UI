@@ -3,9 +3,9 @@ import { ALL_PRESETS } from './data/collections';
 import { forecastShuffle, randomGradient } from './lib/generate';
 import { cloneGradient, hydrateGradient, uid } from './lib/gradient';
 import { load, save } from './lib/storage';
-import type { Gradient, Project, UiStyle, UiTarget } from './types';
+import type { Gradient, PosterSettings, Project, UiScreen, UiStyle, UiTarget } from './types';
 
-export type View = 'gradient' | 'horizon' | 'interface';
+export type View = 'gradient' | 'horizon' | 'interface' | 'poster';
 export type LeftTab = 'library' | 'sky' | 'photo' | 'saved';
 
 export interface HorizonState {
@@ -37,7 +37,9 @@ interface State {
   remixOpen: boolean;
   toast: string | null;
   horizon: HorizonState;
-  ui: { assign: Record<string, UiTarget>; picked: string | null; style: UiStyle };
+  ui: { assign: Record<string, UiTarget>; picked: string | null; style: UiStyle; screen: UiScreen; tried: boolean };
+  poster: PosterSettings;
+  welcomeOpen: boolean;
 
   update: (fn: (d: Gradient) => void, history?: boolean) => void;
   checkpoint: () => void;
@@ -57,6 +59,7 @@ interface State {
   setHorizon: (p: Partial<HorizonState>) => void;
   setUi: (p: Partial<State['ui']>) => void;
   setUiStyle: (p: Partial<UiStyle>) => void;
+  setPoster: (p: Partial<PosterSettings>) => void;
   notify: (msg: string) => void;
 }
 
@@ -75,7 +78,21 @@ const DEFAULT_ASSIGN: Record<string, UiTarget> = {
   'login-btn': 'background',
   nav: 'none',
   logo: 'text',
+  'app-header': 'background',
+  'app-temp': 'none',
+  'app-card': 'border',
+  'app-fab': 'background',
+  'app-tabbar': 'none',
+  'dash-side': 'none',
+  'dash-title': 'text',
+  'dash-stat-1': 'background',
+  'dash-stat-2': 'none',
+  'dash-stat-3': 'border',
+  'dash-chart': 'background',
+  'dash-btn': 'background',
 };
+
+const DEFAULT_POSTER: PosterSettings = { size: 'a3', paper: 'white', layout: 'framed', margin: 0.1, title: '', subtitle: '', notes: true, edition: '001 / 100' };
 
 const DEFAULT_STYLE: UiStyle = { radius: 14, shadow: 0.3, glass: 0.5, spacing: 1, borderWidth: 2, font: 'sans', textTone: 'auto', surface: 'light' };
 
@@ -102,7 +119,11 @@ export const useStore = create<State>((set, get) => ({
     assign: { ...DEFAULT_ASSIGN, ...load<Record<string, UiTarget>>('atmos.ui.assign', {}) },
     picked: null,
     style: { ...DEFAULT_STYLE, ...load<Partial<UiStyle>>('atmos.ui.style', {}) },
+    screen: 'landing',
+    tried: load<boolean>('atmos.ui.tried', false),
   },
+  poster: { ...DEFAULT_POSTER, ...load<Partial<PosterSettings>>('atmos.poster', {}) },
+  welcomeOpen: !load<boolean>('atmos.welcomed', false),
 
   update: (fn, history = true) => {
     const { gradient, past } = get();
@@ -170,6 +191,7 @@ export const useStore = create<State>((set, get) => ({
   setHorizon: (p) => set({ horizon: { ...get().horizon, ...p } }),
   setUi: (p) => set({ ui: { ...get().ui, ...p } }),
   setUiStyle: (p) => set({ ui: { ...get().ui, style: { ...get().ui.style, ...p } } }),
+  setPoster: (p) => set({ poster: { ...get().poster, ...p } }),
   notify: (msg) => {
     clearTimeout(toastTimer);
     set({ toast: msg });
@@ -184,6 +206,9 @@ useStore.subscribe((s, prev) => {
   if (s.projects !== prev.projects) save('atmos.projects', s.projects);
   if (s.ui.assign !== prev.ui.assign) save('atmos.ui.assign', s.ui.assign);
   if (s.ui.style !== prev.ui.style) save('atmos.ui.style', s.ui.style);
+  if (s.ui.tried !== prev.ui.tried) save('atmos.ui.tried', s.ui.tried);
+  if (s.poster !== prev.poster) save('atmos.poster', s.poster);
+  if (!s.welcomeOpen && prev.welcomeOpen) save('atmos.welcomed', true);
   if (s.gradient !== prev.gradient) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => save('atmos.current', s.gradient), 400);

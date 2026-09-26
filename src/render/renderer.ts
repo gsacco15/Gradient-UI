@@ -1,18 +1,13 @@
-import { hexToOklab } from '../lib/color';
-import { MAX_POINTS, sortedStops } from '../lib/gradient';
 import type { Gradient } from '../types';
 import { FRAG, VERT } from './shader';
-
-const TYPE_ID = { linear: 0, radial: 1, conic: 2, mesh: 3, frame: 4 } as const;
-const SYM_ID = { none: 0, mirror: 1, quadrant: 2, kaleido: 3 } as const;
-const SHAPE_ID = { square: 0, circle: 1, arch: 2 } as const;
-const MODE_ID = { none: 0, drift: 1, rotate: 2, pulse: 3, flow: 4 } as const;
+import { gradientUniforms, type UniformKind } from './uniforms';
 
 export interface RenderOptions {
   phase?: number; // 0..1 animation loop phase
   seed?: number; // grain seed
   pxScale?: number; // size of one grain/dither "pixel" in device pixels
   scan?: { pos: number; dir: 'columns' | 'rows' };
+  mouse?: { x: number; y: number; presence: number }; // pointer in canvas uv (y down), presence 0..1
 }
 
 export class GradientRenderer {
@@ -95,53 +90,13 @@ export class GradientRenderer {
     gl.viewport(0, 0, width, height);
     gl.useProgram(this.prog);
 
-    const ramp = g.type !== 'mesh';
-    const pts = (ramp ? sortedStops(g) : g.points).slice(0, MAX_POINTS);
-    const col = new Float32Array(MAX_POINTS * 3);
-    const pos = new Float32Array(MAX_POINTS);
-    const xy = new Float32Array(MAX_POINTS * 2);
-    const size = new Float32Array(MAX_POINTS);
-    pts.forEach((p, i) => {
-      col.set(hexToOklab(p.color), i * 3);
-      pos[i] = p.pos;
-      xy[i * 2] = p.x;
-      xy[i * 2 + 1] = p.y;
-      size[i] = p.size;
-    });
-
+    for (const [name, [kind, v]] of Object.entries(gradientUniforms(g, { scan: !!o.scan }))) this.set(name, kind, v);
     gl.uniform2f(this.u('u_res'), width, height);
-    gl.uniform1i(this.u('u_type'), o.scan ? 5 : TYPE_ID[g.type]);
-    gl.uniform1i(this.u('u_n'), pts.length);
-    gl.uniform3fv(this.u('u_col'), col);
-    gl.uniform1fv(this.u('u_pos'), pos);
-    gl.uniform2fv(this.u('u_xy'), xy);
-    gl.uniform1fv(this.u('u_size'), size);
-    gl.uniform3fv(this.u('u_bg'), new Float32Array(hexToOklab(g.background)));
-    gl.uniform1f(this.u('u_angle'), (g.angle * Math.PI) / 180);
-    gl.uniform2f(this.u('u_center'), g.center.x, g.center.y);
-
-    const c = g.composition;
-    gl.uniform1i(this.u('u_sym'), o.scan ? 0 : SYM_ID[c.symmetry]);
-    gl.uniform1f(this.u('u_slices'), c.slices);
-    gl.uniform1i(this.u('u_shape'), SHAPE_ID[c.shape]);
-    gl.uniform1f(this.u('u_count'), c.count);
-    gl.uniform1f(this.u('u_soft'), c.softness);
-    gl.uniform1f(this.u('u_rot'), o.scan ? 0 : (c.rotation * Math.PI) / 180);
-
-    const w = g.weather;
-    gl.uniform1f(this.u('u_fog'), w.fog);
-    gl.uniform1f(this.u('u_haze'), w.haze);
-    gl.uniform1f(this.u('u_frost'), w.frost);
-    gl.uniform1f(this.u('u_heat'), w.heat);
-    gl.uniform1f(this.u('u_clouds'), w.clouds);
-    gl.uniform1f(this.u('u_pixel'), w.pixel);
-    gl.uniform1f(this.u('u_dusk'), w.dusk);
-
-    gl.uniform1i(this.u('u_mode'), o.scan ? 0 : MODE_ID[g.motion.mode]);
-    gl.uniform1f(this.u('u_speed'), g.motion.speed);
     gl.uniform1f(this.u('u_phase'), o.phase ?? 0);
     gl.uniform1f(this.u('u_seed'), o.seed ?? 0);
     gl.uniform1f(this.u('u_pxScale'), o.pxScale ?? 1);
+    gl.uniform2f(this.u('u_mouse'), o.mouse?.x ?? 0.5, o.mouse?.y ?? 0.5);
+    gl.uniform1f(this.u('u_presence'), o.mouse?.presence ?? 0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
@@ -150,6 +105,16 @@ export class GradientRenderer {
     gl.uniform1i(this.u('u_scanDir'), o.scan?.dir === 'rows' ? 1 : 0);
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  private set(name: string, kind: UniformKind, v: number[]) {
+    const gl = this.gl, l = this.u(name);
+    if (kind === '1i') gl.uniform1i(l, v[0]);
+    else if (kind === '1f') gl.uniform1f(l, v[0]);
+    else if (kind === '2f') gl.uniform2f(l, v[0], v[1]);
+    else if (kind === '3fv') gl.uniform3fv(l, v);
+    else if (kind === '2fv') gl.uniform2fv(l, v);
+    else gl.uniform1fv(l, v);
   }
 }
 

@@ -40,6 +40,14 @@ export interface Motion {
   duration: number; // loop length in seconds
 }
 
+export type InteractMode = 'none' | 'follow' | 'repel' | 'lens';
+
+/** Cursor-reactive behaviour: colours follow, flee or magnify under the pointer. */
+export interface Interact {
+  mode: InteractMode;
+  strength: number; // 0..1
+}
+
 export interface Gradient {
   id: string;
   name: string; // e.g. "GLACIER HOUR"
@@ -55,6 +63,7 @@ export interface Gradient {
   composition: Composition;
   weather: Weather;
   motion: Motion;
+  interact: Interact;
 }
 
 export interface Project {
@@ -72,7 +81,23 @@ export interface UiStyle {
   glass: number;
   spacing: number;
   borderWidth: number;
-  font: 'mono' | 'sans' | 'serif';
+  font: 'sans' | 'grotesk' | 'serif' | 'mono';
   textTone: 'auto' | 'light' | 'dark';
   surface: 'light' | 'dark';
+}
+
+export type UiScreen = 'landing' | 'app' | 'dashboard';
+
+export type PosterSize = 'a3' | 'square' | 'portrait45' | 'landscape';
+export type PosterPaper = 'white' | 'bone' | 'ink';
+
+export interface PosterSettings {
+  size: PosterSize;
+  paper: PosterPaper;
+  layout: 'framed' | 'bleed';
+  margin: number; // 0.04..0.2 of the short side
+  title: string; // empty = gradient name
+  subtitle: string; // empty = place · time
+  notes: boolean; // colour field notes
+  edition: string; // e.g. "001 / 100"
 }
