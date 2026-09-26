@@ -5,6 +5,7 @@ import { nameForColor } from '../data/names';
 import { hexToOklch } from '../lib/color';
 import { useStore, type LeftTab } from '../store';
 import type { Gradient } from '../types';
+import { DescribePanel } from './DescribePanel';
 import { LiveSky } from './LiveSky';
 import { PhotoPanel } from './PhotoPanel';
 import { SavedPanel } from './SavedPanel';
@@ -12,7 +13,8 @@ import { Thumb } from './Thumb';
 
 const TABS: { id: LeftTab; label: string }[] = [
   { id: 'library', label: 'LIBRARY' },
-  { id: 'sky', label: 'LIVE SKY' },
+  { id: 'describe', label: 'DESCRIBE' },
+  { id: 'sky', label: 'SKY' },
   { id: 'photo', label: 'PHOTO' },
   { id: 'saved', label: 'SAVED' },
 ];
@@ -73,6 +75,7 @@ export function Library() {
       </nav>
       <div className="library-body">
         {tab === 'library' && <Collections />}
+        {tab === 'describe' && <DescribePanel />}
         {tab === 'sky' && <LiveSky />}
         {tab === 'photo' && <PhotoPanel />}
         {tab === 'saved' && <SavedPanel />}

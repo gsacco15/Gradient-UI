@@ -11,7 +11,11 @@ npm run build    # static site in dist/ — host anywhere
 npm test         # unit tests
 ```
 
-No backend. Projects, favourites and settings are saved in the browser.
+Projects, favourites and settings are saved in the browser. The only server code is the optional AI endpoint.
+
+### Enabling AI generation (Describe tab)
+
+`api/generate.ts` is a Vercel serverless function that calls Claude. Add `ANTHROPIC_API_KEY` in Vercel → Project → Settings → Environment Variables and redeploy. Without it, Describe uses the built-in generator. The endpoint caps prompts at 200 characters and rate-limits each visitor to 8 requests a minute per server instance; set a spend limit on your Anthropic account as well.
 
 ## What's in v0.2
 
@@ -24,10 +28,11 @@ No backend. Projects, favourites and settings are saved in the browser.
 | **Motion** | Drift, rotate, pulse, flow — all loops are seamless |
 | **Live Sky** | The sky's colour from the sun's real position at your location and time; scrub the day; export a 24-hour loop video |
 | **Photo → Place** | Drop a photo, get a named palette (k-means in Oklab) and six gradient combinations |
-| **Horizon** | Scans an image one pixel line at a time and turns it into a moving horizon film (columns or rows, 24/30/60 fps) |
+| **Horizon** | Scans an image one pixel line at a time and turns it into a moving horizon film (columns or rows, 24/30/60 fps). Save any frame as a still PNG; your photo is remembered in the browser |
 | **Interface** | Three sample screens (landing page, mobile app, dashboard). Click any outlined element to use the gradient as its background, border or text, then copy that component's HTML/CSS. Corners, shadow, glass, spacing, four typefaces, light/dark page, and a live WCAG contrast check |
 | **Poster** | The gradient as a print with field-note typography: A3, 4:5, square or landscape at 300 DPI; white, bone or ink paper; framed or full-bleed; custom title and edition |
 | **Cursor** | Follow, repel or lens — colours react to the mouse, in the studio and in the live embed |
+| **Describe (experimental)** | Type a scene or mood ("Tokyo rain at 2am") and Claude designs the gradient — colours, place, time, weather. Falls back to a built-in keyword generator when AI isn't configured |
 | **Search** | Find gradients by mood (sunset, fog, neon), place, colour name, hex or type |
 | **Tools** | Welcome guide, forecast shuffle (locks respected; shift for a totally new gradient), remix variations, hold-to-compare, undo/redo, named projects with duplicate |
 | **Export** | PNG (up to 8K), SVG, CSS (Oklab-matched stops + grain overlay + tokens), Tailwind v3/v4, MP4/WebM video, live WebGL embed snippet, project JSON, share links |

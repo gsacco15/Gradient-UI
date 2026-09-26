@@ -155,3 +155,36 @@ describe('v0.2 features', () => {
     }
   });
 });
+
+describe('text → gradient', () => {
+  it('sanitizes model output and rejects unusable colours', async () => {
+    const { sanitizeAi } = await import('./aiSchema');
+    const ok = sanitizeAi({ name: 'tokyo rain', place: 'shibuya', time: '2:07', type: 'nope', angle: -90, colors: ['#ff00aa', 'bad', '0a0a12'], fog: 9, haze: -1 });
+    expect(ok?.name).toBe('TOKYO RAIN');
+    expect(ok?.time).toBe('02:07');
+    expect(ok?.type).toBe('mesh');
+    expect(ok?.angle).toBe(270);
+    expect(ok?.colors).toEqual(['#FF00AA', '#0A0A12']);
+    expect(ok?.fog).toBe(0.8);
+    expect(ok?.haze).toBe(0);
+    expect(sanitizeAi({ colors: ['#fff'] })).toBeNull();
+  });
+  it('built-in generator is deterministic and reads colour and mood words', async () => {
+    const { localTextGradient } = await import('./textGradient');
+    const a = localTextGradient('Tokyo rain at 2am');
+    const b = localTextGradient('Tokyo rain at 2am');
+    expect(a.gradient.points.map((p) => p.color)).toEqual(b.gradient.points.map((p) => p.color));
+    expect(a.gradient.time.startsWith('02:')).toBe(true);
+    const blue = localTextGradient('deep navy and cobalt blue');
+    const hues = blue.gradient.points.map((p) => hexToOklab(p.color)[2]);
+    expect(hues.every((v) => v < 0)).toBe(true); // Oklab b < 0 = blue side
+  });
+  it('the API answers 503 when no key is configured', async () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    const { POST } = await import('../../api/generate');
+    const res = await POST(new Request('http://x/api/generate', { method: 'POST', body: JSON.stringify({ prompt: 'fog' }) }));
+    expect(res.status).toBe(503);
+    if (saved) process.env.ANTHROPIC_API_KEY = saved;
+  });
+});

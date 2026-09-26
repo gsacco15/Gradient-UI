@@ -341,6 +341,21 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; border-radius: 
 .welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .welcome-actions .btn { min-width: 180px; }
 
+/* ---------------------------------------------------------------- describe (experimental AI) */
+.exp-tag { align-self: flex-start; font-size: 9.5px; padding: 3px 7px; border: 1px dashed var(--ink); }
+.describe { display: flex; flex-direction: column; border: 1px solid var(--line); }
+.describe:focus-within { border-color: var(--ink); }
+.describe textarea { border: 0; resize: none; padding: 10px; font-size: 11px; line-height: 1.6; background: none; outline: none; letter-spacing: 0.02em; }
+.describe textarea::placeholder { color: var(--faint); }
+.describe-row { display: flex; justify-content: space-between; align-items: center; padding: 0 0 0 10px; border-top: 1px solid var(--line); }
+.describe-row .btn { padding: 9px 16px; }
+.describe-busy { font-size: 10px; color: var(--muted); animation: breathe 1.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.35; } }
+.error-text { color: var(--bad); font-size: 10.5px; margin: 0; line-height: 1.5; }
+.hint.warn { color: var(--warn); }
+.describe-result { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+.tabs.small button { padding: 12px 2px; font-size: 9.5px; }
+
 /* ---------------------------------------------------------------- mobile */
 @media (max-width: 1100px) {
   .app { grid-template-columns: 236px minmax(0, 1fr) 280px; }

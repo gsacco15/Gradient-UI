@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { ALL_PRESETS } from './data/collections';
 import { forecastShuffle, randomGradient } from './lib/generate';
 import { cloneGradient, hydrateGradient, uid } from './lib/gradient';
+import { idbSet } from './lib/idb';
 import { load, save } from './lib/storage';
 import type { Gradient, PosterSettings, Project, UiScreen, UiStyle, UiTarget } from './types';
 
 export type View = 'gradient' | 'horizon' | 'interface' | 'poster';
-export type LeftTab = 'library' | 'sky' | 'photo' | 'saved';
+export type LeftTab = 'library' | 'describe' | 'sky' | 'photo' | 'saved';
 
 export interface HorizonState {
   image: string | null; // data URL
@@ -209,6 +210,11 @@ useStore.subscribe((s, prev) => {
   if (s.ui.tried !== prev.ui.tried) save('atmos.ui.tried', s.ui.tried);
   if (s.poster !== prev.poster) save('atmos.poster', s.poster);
   if (!s.welcomeOpen && prev.welcomeOpen) save('atmos.welcomed', true);
+  // Remember the photo behind Horizon (IndexedDB — photos are too big for localStorage).
+  const hz = s.horizon;
+  if (hz.image && hz.image !== prev.horizon.image && hz.imageName !== 'DEMO LANDSCAPE') {
+    idbSet('horizon-source', { image: hz.image, imageName: hz.imageName, width: hz.width, height: hz.height });
+  }
   if (s.gradient !== prev.gradient) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => save('atmos.current', s.gradient), 400);

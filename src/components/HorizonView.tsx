@@ -1,9 +1,11 @@
 // Horizon mode: scan a photo one pixel line at a time and turn it into a moving horizon.
 import { useEffect, useRef, useState } from 'react';
+import { download, slug } from '../lib/exportCode';
+import { idbDel, idbGet } from '../lib/idb';
 import { readImageFile } from '../lib/palette';
 import { useStore } from '../store';
 import type { Weather } from '../types';
-import { grainScale } from '../render/renderer';
+import { GradientRenderer, grainScale } from '../render/renderer';
 import { useRenderLoop } from './Canvas';
 import { Field, Section, Seg, Slider } from './ui';
 
@@ -42,6 +44,16 @@ export function demoLandscape(): string {
   return c.toDataURL('image/jpeg', 0.92);
 }
 
+/** Live scan position, shared with the inspector so a still captures exactly what's on screen. */
+export const livePos = { value: 0 };
+export const HORIZON_KEY = 'horizon-source';
+export interface StoredSource {
+  image: string;
+  imageName: string;
+  width: number;
+  height: number;
+}
+
 export function HorizonView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const h = useStore((s) => s.horizon);
@@ -54,9 +66,16 @@ export function HorizonView() {
 
   useEffect(() => {
     if (!h.image) {
-      const url = demoLandscape();
-      useStore.getState().setHorizon({ image: url, imageName: 'DEMO LANDSCAPE', width: 1200, height: 800 });
-      return;
+      // Bring back the last photo you scanned; otherwise start from the demo landscape.
+      let alive = true;
+      idbGet<StoredSource>(HORIZON_KEY).then((saved) => {
+        if (!alive || useStore.getState().horizon.image) return;
+        if (saved?.image) useStore.getState().setHorizon({ ...saved, pos: 0 });
+        else useStore.getState().setHorizon({ image: demoLandscape(), imageName: 'DEMO LANDSCAPE', width: 1200, height: 800 });
+      });
+      return () => {
+        alive = false;
+      };
     }
     const i = new Image();
     i.onload = () => setImg(i);
@@ -81,6 +100,7 @@ export function HorizonView() {
         const dt = Math.min((t - lastT.current) / 1000, 0.1); // no jump after a pause
         posRef.current = (posRef.current + (dt * s.fps * s.step) / Math.max(1, span)) % 1;
       }
+      livePos.value = posRef.current;
       lastT.current = t;
       r.render(useStore.getState().gradient, { scan: { pos: posRef.current, dir: s.dir }, pxScale: grainScale(r.canvas.width, r.canvas.height), seed: Math.floor(t / 80) % 16 });
     },
@@ -139,6 +159,7 @@ export function HorizonView() {
           style={{ '--p': `${posRef.current * 100}%` } as React.CSSProperties}
           onChange={(e) => {
             posRef.current = parseFloat(e.target.value);
+            livePos.value = posRef.current;
             useStore.getState().setHorizon({ pos: posRef.current });
           }}
           aria-label="Scan position"
@@ -188,7 +209,19 @@ export function HorizonInspector() {
         <input ref={file} type="file" accept="image/*" hidden onChange={(e) => load(e.target.files?.[0])} />
         <p className="muted tiny">
           {h.imageName} · {h.width}×{h.height}
+          {h.imageName !== 'DEMO LANDSCAPE' && ' · SAVED IN THIS BROWSER'}
         </p>
+        {h.imageName !== 'DEMO LANDSCAPE' && (
+          <button
+            className="link"
+            onClick={() => {
+              idbDel(HORIZON_KEY);
+              useStore.getState().setHorizon({ image: demoLandscape(), imageName: 'DEMO LANDSCAPE', width: 1200, height: 800, pos: 0 });
+            }}
+          >
+            FORGET THIS PHOTO · USE THE DEMO
+          </button>
+        )}
       </Section>
       <Section title="SCAN">
         <Field label="DIRECTION">
@@ -219,9 +252,72 @@ export function HorizonInspector() {
           <Slider key={w.key} label={w.label} value={g.weather[w.key]} onChange={(v) => useStore.getState().update((d) => void (d.weather[w.key] = v), false)} />
         ))}
       </Section>
+      <StillSection />
       <button className="btn wide" onClick={() => useStore.getState().set({ exportOpen: true })}>
         EXPORT FILM
       </button>
     </div>
+  );
+}
+
+const STILL_SIZES = [
+  { id: 'source', label: 'PHOTO SIZE' },
+  { id: '1080x1080', label: '1080²' },
+  { id: '1080x1920', label: 'STORY' },
+  { id: '1920x1080', label: 'HD' },
+  { id: '3840x2160', label: '4K' },
+] as const;
+
+/** Freeze the horizon on the current frame and save it as a PNG. */
+function StillSection() {
+  const h = useStore((s) => s.horizon);
+  const g = useStore((s) => s.gradient);
+  const [size, setSize] = useState<(typeof STILL_SIZES)[number]['id']>('source');
+  const [busy, setBusy] = useState(false);
+  const [w, hh] = size === 'source' ? [h.width, h.height] : size.split('x').map(Number);
+
+  const save = async () => {
+    if (!h.image) return;
+    setBusy(true);
+    const pos = livePos.value;
+    useStore.getState().setHorizon({ playing: false, pos });
+    try {
+      const img = await new Promise<HTMLImageElement>((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = h.image!;
+      });
+      const canvas = document.createElement('canvas');
+      const r = new GradientRenderer(canvas, true);
+      r.setSize(w, hh);
+      r.setImage(img);
+      r.render(g, { scan: { pos, dir: h.dir }, pxScale: grainScale(w, hh) });
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
+      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+      if (!blob) throw new Error('PNG failed');
+      const frame = Math.floor(pos * (h.dir === 'columns' ? h.width : h.height));
+      download(`atmos-horizon-${slug(h.imageName)}-line-${frame}-${w}x${hh}.png`, blob);
+      useStore.getState().notify(`STILL SAVED · LINE ${frame}`);
+    } catch (e) {
+      useStore.getState().notify(`STILL FAILED · ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Section title="STILL">
+      <p className="hint">Pause or scrub to the frame you like, then save it as an image.</p>
+      <Field label="SIZE">
+        <Seg options={STILL_SIZES.map((x) => x.id)} value={size} onChange={setSize} labels={Object.fromEntries(STILL_SIZES.map((x) => [x.id, x.label]))} />
+      </Field>
+      <p className="muted tiny">
+        {w} × {hh} PX · PNG
+      </p>
+      <button className="btn ghost wide" onClick={save} disabled={busy || !h.image}>
+        {busy ? 'SAVING…' : 'DOWNLOAD STILL'}
+      </button>
+    </Section>
   );
 }
