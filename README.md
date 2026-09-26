@@ -17,7 +17,21 @@ Projects, favourites and settings are saved in the browser. The only server code
 
 `api/generate.ts` is a Vercel serverless function that calls Claude. Add `ANTHROPIC_API_KEY` in Vercel → Project → Settings → Environment Variables and redeploy. Without it, Describe uses the built-in generator. The endpoint caps prompts at 200 characters and rate-limits each visitor to 8 requests a minute per server instance; set a spend limit on your Anthropic account as well.
 
-## What's in v0.2
+### Accounts and the community wall (Supabase)
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **SQL Editor → New query**, paste [`supabase/schema.sql`](supabase/schema.sql), **Run**.
+3. **Authentication → Sign In / Providers → Email**: keep Email on and turn **Confirm email** off, so sign-up logs people straight in.
+4. **Authentication → URL Configuration**: set Site URL to your domain (e.g. `https://gradient-ui.vercel.app`) and add `https://gradient-ui.vercel.app/**` to Redirect URLs (used by the email sign-in link).
+5. **Project Settings → API**: copy the Project URL and the `anon` public key into Vercel as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then redeploy.
+
+The anon key is meant to be public; row level security in the schema lets anyone read the wall but only lets people add, like or delete their own posts. Without these variables the site hides sign-in and shows featured gradients on the wall.
+
+## Routes
+
+`/` landing page · `/studio` the app (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt)
+
+## What's in v0.3
 
 | Area | Features |
 | --- | --- |

@@ -41,6 +41,7 @@ interface State {
   ui: { assign: Record<string, UiTarget>; picked: string | null; style: UiStyle; screen: UiScreen; tried: boolean };
   poster: PosterSettings;
   welcomeOpen: boolean;
+  pendingPrompt: string | null; // a description handed over from the landing page
 
   update: (fn: (d: Gradient) => void, history?: boolean) => void;
   checkpoint: () => void;
@@ -125,6 +126,7 @@ export const useStore = create<State>((set, get) => ({
   },
   poster: { ...DEFAULT_POSTER, ...load<Partial<PosterSettings>>('atmos.poster', {}) },
   welcomeOpen: !load<boolean>('atmos.welcomed', false),
+  pendingPrompt: null,
 
   update: (fn, history = true) => {
     const { gradient, past } = get();

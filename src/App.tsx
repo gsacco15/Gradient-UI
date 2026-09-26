@@ -10,6 +10,9 @@ import { PosterInspector, PosterView } from './components/PosterView';
 import { Thumb } from './components/Thumb';
 import { Welcome } from './components/Welcome';
 import { remix } from './lib/generate';
+import { gradientFromHash } from './lib/share';
+import { accountsEnabled, displayName, publish, requireAccount, signOut, useAuth } from './lib/supabase';
+import { linkTo } from './router';
 import { useStore, type View } from './store';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
@@ -31,6 +34,7 @@ export default function App() {
   const [pane, setPane] = useState<MobilePane>('canvas');
 
   useShortcuts(setCompare);
+  useIncomingLinks();
 
   return (
     <div className={`app pane-${pane}`}>
@@ -76,6 +80,62 @@ export default function App() {
   );
 }
 
+/** Studio entry points: shared "#g=" links and "?describe=" from the landing page. */
+function useIncomingLinks() {
+  useEffect(() => {
+    const s = useStore.getState();
+    const shared = gradientFromHash(location.hash);
+    if (shared) {
+      s.load(shared);
+      s.set({ welcomeOpen: false });
+    }
+    const describe = new URLSearchParams(location.search).get('describe');
+    if (describe) {
+      s.set({ pendingPrompt: describe.slice(0, 200), welcomeOpen: false });
+      s.setLeftTab('describe');
+    }
+    if (shared || describe) history.replaceState(null, '', '/studio');
+  }, []);
+}
+
+function ShareButton() {
+  const [busy, setBusy] = useState(false);
+  const share = () =>
+    requireAccount(async () => {
+      setBusy(true);
+      try {
+        await publish(useStore.getState().gradient);
+        useStore.getState().notify('SHARED TO THE COMMUNITY ✓');
+      } catch (e) {
+        useStore.getState().notify(`SHARE FAILED · ${(e as Error).message}`);
+      } finally {
+        setBusy(false);
+      }
+    });
+  if (!accountsEnabled) return null;
+  return (
+    <button onClick={share} disabled={busy} title="Post this gradient to the community wall">
+      {busy ? 'SHARING…' : 'SHARE'}
+    </button>
+  );
+}
+
+function Account() {
+  const session = useAuth((s) => s.session);
+  if (!accountsEnabled) return null;
+  return session ? (
+    <button onClick={() => confirmSignOut()} title={`Signed in as ${session.user.email}. Click to sign out.`}>
+      {displayName(session).toUpperCase().slice(0, 14)}
+    </button>
+  ) : (
+    <button onClick={() => useAuth.getState().open('signin')}>SIGN IN</button>
+  );
+}
+
+function confirmSignOut() {
+  signOut().then(() => useStore.getState().notify('SIGNED OUT'));
+}
+
 function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boolean) => void }) {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
@@ -84,10 +144,10 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
   const s = useStore.getState;
   return (
     <header className="topbar">
-      <div className="brand">
+      <a className="brand" {...linkTo('/')} title="Back to the home page">
         <strong>ATMOS [ STUDIO ]</strong>
-        <span className="muted">SKY &amp; NATURE GRADIENTS / V0.2</span>
-      </div>
+        <span className="muted">SKY &amp; NATURE GRADIENTS / V0.3</span>
+      </a>
       <div className="actions">
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">
           UNDO
@@ -122,9 +182,11 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
         <button onClick={() => s().saveProject()} title="Save to this browser (⌘S)">
           SAVE
         </button>
+        <ShareButton />
         <button onClick={() => s().set({ welcomeOpen: true })} title="What is this? (?)" aria-label="Help">
           ?
         </button>
+        <Account />
         <button className="primary" onClick={() => s().set({ exportOpen: true })} title="Export (E)">
           EXPORT
         </button>

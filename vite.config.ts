@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Relative base so the build works on any static host (GitHub Pages, Vercel, a folder).
+// Absolute base: the app has real routes (/ and /studio), so assets must resolve from the root.
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [react()],
 });

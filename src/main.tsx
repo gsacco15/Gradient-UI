@@ -1,19 +1,28 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { gradientFromHash } from './lib/share';
-import { useStore } from './store';
+import { AuthDialog } from './components/AuthDialog';
+import Landing from './landing/Landing';
+import { usePath } from './router';
 import './styles.css';
 
-// Open a shared gradient from the URL, then clear the hash so reloads don't reset edits.
-const shared = gradientFromHash(location.hash);
-if (shared) {
-  useStore.getState().load(shared);
-  history.replaceState(null, '', location.pathname + location.search);
+// Old share links pointed at "/#g=…"; they belong to the studio now.
+if (!location.pathname.startsWith('/studio') && /[#&]g=/.test(location.hash)) {
+  history.replaceState(null, '', `/studio${location.search}${location.hash}`);
+}
+
+function Root() {
+  const path = usePath();
+  return (
+    <>
+      {path.startsWith('/studio') ? <App /> : <Landing />}
+      <AuthDialog />
+    </>
+  );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

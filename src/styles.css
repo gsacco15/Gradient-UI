@@ -391,3 +391,6 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; border-radius: 
   .dash-stats { grid-template-columns: 1fr; }
   .iface-hint { display: none; }
 }
+
+a.brand { color: inherit; text-decoration: none; }
+a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }

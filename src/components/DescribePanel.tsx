@@ -1,5 +1,5 @@
 // Experimental: describe a scene or mood in words, get a gradient.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MAX_PROMPT } from '../lib/aiSchema';
 import { generateFromText, type TextResult } from '../lib/textGradient';
 import { useStore } from '../store';
@@ -31,6 +31,16 @@ export function DescribePanel() {
       setBusy(false);
     }
   };
+
+  // A description typed on the landing page runs as soon as the studio opens.
+  useEffect(() => {
+    const p = useStore.getState().pendingPrompt;
+    if (p) {
+      useStore.getState().set({ pendingPrompt: null });
+      run(p);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const latest = history[0];
 
