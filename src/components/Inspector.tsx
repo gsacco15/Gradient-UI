@@ -259,26 +259,27 @@ function HexInput({ value, onCommit }: { value: string; onCommit: (hex: string) 
 }
 
 /**
- * Width ÷ height of an aperture or halo, on a log scale so wide and tall feel even.
+ * Shape of an aperture or halo, on a log scale so tall and wide feel even.
  * 1:1 is a true circle or square on any canvas, poster or LED frame.
  */
 function ProportionSlider({ g, update }: { g: Gradient; update: (fn: (d: Gradient) => void, history?: boolean) => void }) {
-  const ratio = g.composition.ratio ?? 1;
-  const fmt = (v: number) => {
-    const r = 2 ** v;
-    if (Math.abs(v) < 0.02) return '1:1';
-    return r > 1 ? `${r.toFixed(2)}:1` : `1:${(1 / r).toFixed(2)}`;
+  // Slider right = taller, left = wider. ratio stays width ÷ height underneath.
+  const v = -Math.log2(g.composition.ratio ?? 1);
+  const fmt = (x: number) => {
+    if (Math.abs(x) < 0.02) return '1:1';
+    const k = 2 ** Math.abs(x);
+    return x > 0 ? `TALL ${k.toFixed(1)}×` : `WIDE ${k.toFixed(1)}×`;
   };
   return (
     <Slider
       label="PROPORTION"
-      hint="1:1 is a true circle or square everywhere. Slide right for wider, left for taller."
-      value={Math.log2(ratio)}
+      hint="1:1 is a true circle or square everywhere. Slide right for taller, left for wider."
+      value={v}
       min={-1.5}
       max={1.5}
       step={0.01}
       format={fmt}
-      onChange={(v) => update((d) => void (d.composition.ratio = Math.abs(v) < 0.06 ? 1 : 2 ** v), false)}
+      onChange={(x) => update((d) => void (d.composition.ratio = Math.abs(x) < 0.06 ? 1 : 2 ** -x), false)}
     />
   );
 }
