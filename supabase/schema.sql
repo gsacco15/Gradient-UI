@@ -48,4 +48,8 @@ create policy "insert own like" on public.gradient_likes for insert to authentic
 drop policy if exists "delete own like" on public.gradient_likes;
 create policy "delete own like" on public.gradient_likes for delete to authenticated using (auth.uid() = user_id);
 
-grant select on public.community_gradients to anon, authenticated;
+-- Explicit Data API access (works whether or not "automatically expose new tables" is on).
+-- Row level security above still decides which rows each person can touch.
+grant usage on schema public to anon, authenticated;
+grant select on public.shared_gradients, public.gradient_likes, public.community_gradients to anon, authenticated;
+grant insert, delete on public.shared_gradients, public.gradient_likes to authenticated;
