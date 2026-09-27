@@ -593,7 +593,7 @@ function HowItWorks() {
                 <span className="l-how-btn">
                   <Thumb g={preset('ALPENGLOW')} w={60} h={16} />
                 </span>
-                <code>{'background: linear-gradient(…)'}</code>
+                <code>{'linear-gradient(…)'}</code>
               </span>
             </span>
             <em>Web · CSS</em>
