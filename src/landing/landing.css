@@ -382,3 +382,19 @@
 .l-how-web { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 18px 30px -14px rgba(40, 30, 20, 0.35), 0 4px 8px -4px rgba(40, 30, 20, 0.2); }
 .l-how-poster { box-shadow: 0 18px 30px -14px rgba(40, 30, 20, 0.45), 0 4px 8px -4px rgba(40, 30, 20, 0.25); }
 .l-how-oval { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 0 22px 2px rgba(242, 201, 168, 0.55), 0 0 50px 8px rgba(107, 79, 160, 0.22), 0 18px 30px -14px rgba(40, 30, 20, 0.4); }
+
+/* Use it, quieter: one light material language for all four objects. */
+.l-how-phone { background: linear-gradient(145deg, #e9e6e0, #cfcbc3); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 16px 28px -14px rgba(40, 30, 20, 0.35); }
+.l-how-phone::before, .l-how-phone::after { display: none; }
+.l-how-lock { font-weight: 500; font-size: 17px; letter-spacing: -0.02em; }
+.l-how-lock small { opacity: 0.75; }
+.l-how-phone .thumb::after { background: linear-gradient(125deg, rgba(255, 255, 255, 0.1), transparent 40%); }
+.l-how-web { background: #fff; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 16px 28px -14px rgba(40, 30, 20, 0.3); }
+.l-how-bar { background: #f3f1ec; }
+.l-how-bar i, .l-how-bar i:nth-child(2), .l-how-bar i:nth-child(3) { background: #d6d2ca; }
+.l-how-line { background: #ebe8e2; }
+.l-how-page code { color: #8a867e; background: #f3f1ec; }
+.l-how-poster { border: 0; padding: 6px 6px 14px; background: #fff; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 16px 28px -14px rgba(40, 30, 20, 0.35); }
+.l-how-poster img { height: calc(100% - 4px); }
+.l-how-poster u { left: 6px; bottom: 5px; width: 26%; height: 1.5px; opacity: 0.35; }
+.l-how-oval { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 0 18px 1px rgba(242, 201, 168, 0.4), 0 16px 28px -14px rgba(40, 30, 20, 0.35); }
