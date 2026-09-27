@@ -91,3 +91,14 @@ describe('LED direction', () => {
     for (const p of l.leds) expect(Math.hypot(p.x - s.frameW / 2, p.y - s.frameH / 2)).toBeCloseTo(r, 0);
   });
 });
+
+describe('WLED still', () => {
+  it('lists every LED as hex in wiring order with brightness', async () => {
+    const { wledStill } = await import('./led');
+    const cmd = JSON.parse(wledStill(new Uint8Array([255, 0, 16, 1, 2, 3]), 2, 0.5, 'Alpenglow'));
+    expect(cmd.seg[0].i).toEqual(['FF0010', '010203']);
+    expect(cmd.seg[0].fx).toBe(0);
+    expect(cmd.bri).toBe(128);
+    expect(cmd.on).toBe(true);
+  });
+});

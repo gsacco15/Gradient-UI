@@ -249,3 +249,14 @@ export function layoutJson(layout: LedLayout, s: LedSettings, name: string) {
     1,
   );
 }
+
+/**
+ * A WLED preset that shows one exact frame: every LED its own colour, in wiring order.
+ * Paste into a preset's API command box. Colours are as designed; WLED applies its own gamma.
+ */
+export function wledStill(rgb: Uint8Array, count: number, brightness: number, name: string): string {
+  const hex = (v: number) => v.toString(16).padStart(2, '0').toUpperCase();
+  const leds: string[] = [];
+  for (let i = 0; i < count; i++) leds.push(hex(rgb[i * 3]) + hex(rgb[i * 3 + 1]) + hex(rgb[i * 3 + 2]));
+  return JSON.stringify({ on: true, bri: Math.max(1, Math.round(brightness * 255)), seg: [{ id: 0, start: 0, stop: count, fx: 0, i: leds }], n: `Atmos · ${name}`.slice(0, 32) });
+}
