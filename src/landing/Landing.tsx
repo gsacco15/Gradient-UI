@@ -1,7 +1,7 @@
 // Landing page: a live sky, what Atmos does, the community wall, and a way in.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_PRESETS } from '../data/collections';
-import { useRenderLoop, usePointer } from '../components/Canvas';
+import { useOnScreen, usePointer, useRenderLoop } from '../render/loop';
 import { Thumb } from '../components/Thumb';
 import { hexToOklab, hexToRgb, luminance } from '../lib/color';
 import { cloneGradient } from '../lib/gradient';
@@ -12,8 +12,10 @@ import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
 import horizonSample from './horizon-sample.webp';
-import { LedPiece } from '../led/LedLab';
 import './landing.css';
+
+// The Lab piece loads with the Lab's code, only when its section is near the screen.
+const LedPiece = lazy(() => import('../led/LedLab').then((m) => ({ default: m.LedPiece })));
 
 const preset = (name: string) => ALL_PRESETS.find((g) => g.name === name) ?? ALL_PRESETS[0];
 
@@ -32,7 +34,7 @@ const HERO = HERO_NAMES.map((n) => {
   return g;
 });
 
-const TRY = ['Tokyo rain at 2am', 'Iceland glacier at first light', 'Lavender field in a heat haze', 'Deep sea bioluminescence'];
+const TRY = ['Tokyo rain at 2am', 'Iceland glacier at first light', 'A Turrell skyspace at dusk', 'Lavender field in a heat haze'];
 
 export function openInStudio(g: Gradient) {
   navigate(`/studio#g=${encodeGradient(g)}`);
@@ -41,6 +43,13 @@ export function openInStudio(g: Gradient) {
 export default function Landing({ slug }: { slug?: string }) {
   if (slug) return <SharedViewer slug={slug} />;
   return <Home />;
+}
+
+/** In-page link to a home page section, from any page. */
+function jumpHome(e: React.MouseEvent, id: string) {
+  e.preventDefault();
+  if (location.pathname !== '/') navigate('/');
+  setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), location.pathname === '/' ? 0 : 60);
 }
 
 /** Top bar. `bare` drops the in-page links, for pages without those sections. */
@@ -54,8 +63,10 @@ function LandingNav({ bare = false }: { bare?: boolean }) {
       <div className="l-links">
         {!bare && (
           <>
-            <a href="#features">Features</a>
-            <a href="#community">Community</a>
+            <a href="/#how" onClick={(e) => jumpHome(e, 'how')}>
+              How it works
+            </a>
+            <a {...linkTo('/community')}>Community</a>
             <a {...linkTo('/led')}>Lab</a>
           </>
         )}
@@ -91,10 +102,10 @@ function Home() {
       <LandingNav />
 
       <Hero sky={sky} />
-      <TryStrip sky={sky} />
+      <HowItWorks />
       <Features />
       <LabSection g={sky.sky.g} />
-      <Community />
+      <CommunityWall limit={8} />
 
       <section className="l-final">
         <h2>Your sky is waiting.</h2>
@@ -113,9 +124,10 @@ function Home() {
 
       <footer className="l-foot">
         <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
-        <a {...linkTo('/led')} className="l-foot-link">
-          ATMOS [ LAB ] · LED LIGHT PIECES
-        </a>
+        <span className="l-foot-links">
+          <a {...linkTo('/community')}>COMMUNITY</a>
+          <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
+        </span>
         <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
       </footer>
     </div>
@@ -141,7 +153,9 @@ function LabSection({ g: heroSky }: { g: Gradient }) {
     <section className="l-lab" id="lab">
       <div className="l-lab-card" style={glow}>
         <div className="l-lab-art">
-          <LedPiece g={g} className="l-lab-canvas" />
+          <Suspense fallback={null}>
+            <LedPiece g={g} className="l-lab-canvas" />
+          </Suspense>
           <span className="l-lab-sky">{g.name} · AS A LIGHT PIECE</span>
         </div>
         <div className="l-lab-text">
@@ -258,12 +272,14 @@ function Hero({ sky: h }: { sky: Sky }) {
   const pointer = usePointer(wrap);
   const still = useMemo(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false, []);
   const ink = useMemo(() => inkFor(g), [g]);
+  const onScreen = useOnScreen(wrap);
+  const [text, setText] = useState('');
 
   const { error } = useRenderLoop(
     canvas,
     (r, t) => r.render(g, { phase: still ? 0 : ((t / 1000) / g.motion.duration) % 1, pxScale: grainScale(r.canvas.width, r.canvas.height), seed: 0, mouse: pointer.step() }),
     [g],
-    !still,
+    !still && onScreen,
   );
 
   return (
@@ -276,20 +292,52 @@ function Hero({ sky: h }: { sky: Sky }) {
       </div>
       <div className="l-hero-body">
         <p className="l-eyebrow">A gradient studio · every colour is a place and a moment</p>
-            <h1>
-              Gradients
-              <br />
-              drawn from the sky.
-            </h1>
-            <p className="l-lede">Describe a mood, shape it by hand, then drop it straight into your interface, a poster or a moving film.</p>
-            <div className="l-hero-actions">
-              <a className="l-pill light big" {...linkTo('/studio')}>
-                Start creating →
-              </a>
-              <button className="l-pill glass big" onClick={() => openInStudio(g)}>
-                Open this sky
-              </button>
-            </div>
+        <h1>
+          Gradients
+          <br />
+          drawn from the sky.
+        </h1>
+        <p className="l-lede">Describe any sky and Atmos paints it. Shape it by hand, then use it as a wallpaper, in your designs, as a poster or film, or as light on your wall.</p>
+        <form
+          className="l-ask"
+          onSubmit={(e) => {
+            e.preventDefault();
+            h.generate(text.trim() || 'Tokyo rain at 2am');
+          }}
+        >
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Describe a sky… Tokyo rain at 2am" maxLength={200} aria-label="Describe a sky" readOnly={h.busy} enterKeyHint="go" />
+          <button className="l-pill dark" disabled={h.busy}>
+            {h.busy ? 'Painting…' : 'Paint it →'}
+          </button>
+        </form>
+        <div className="l-ask-chips">
+          {TRY.map((t) => (
+            <button
+              key={t}
+              disabled={h.busy}
+              onClick={() => {
+                setText(t);
+                h.generate(t);
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        {h.error && <p className="l-ask-error">{h.error}</p>}
+        <p className="l-ask-alt">
+          {h.sky.source === 'preset' ? (
+            <>
+              Or{' '}
+              <a {...linkTo('/studio')}>open the studio</a> and start from scratch.
+            </>
+          ) : (
+            <>
+              Like it?{' '}
+              <button onClick={() => openInStudio(g)}>Open this sky in the studio →</button>
+            </>
+          )}
+        </p>
       </div>
       <div className="l-hero-foot">
         <span className="l-hero-caption">
@@ -445,43 +493,63 @@ function SharedIntro({ shared, g }: { shared: SharedGradient; g: Gradient }) {
   );
 }
 
-function TryStrip({ sky }: { sky: Sky }) {
-  const [text, setText] = useState('');
-  return (
-    <section className="l-try">
-      <form
-        className="l-try-box"
-        onSubmit={(e) => {
-          e.preventDefault();
-          sky.generate(text);
-        }}
-      >
-        <span className="l-try-label">Describe a sky</span>
-        <span className="l-exp" title="Generated by Claude. Experimental.">
-          <span className="exp-dot" />
-          Experimental
+/** How it works: three quiet steps, each with a small live picture. */
+function HowItWorks() {
+  const steps: { n: string; title: string; body: string; g: string; art: React.ReactNode }[] = [
+    {
+      n: '01',
+      title: 'Describe',
+      body: 'Name a place, a mood or a moment. Claude chooses the colours, the place and the hour.',
+      g: 'GLACIER HOUR',
+      art: <span className="l-how-prompt">Iceland glacier at first light</span>,
+    },
+    {
+      n: '02',
+      title: 'Shape',
+      body: 'Move the colours, add fog and grain, let it breathe or follow your cursor.',
+      g: 'ALPENGLOW',
+      art: (
+        <span className="l-how-dots" aria-hidden>
+          <i style={{ left: '22%', top: '30%' }} />
+          <i style={{ left: '64%', top: '24%' }} />
+          <i style={{ left: '46%', top: '62%' }} />
+          <i style={{ left: '78%', top: '70%' }} />
         </span>
-        <input id="landing-describe" value={text} onChange={(e) => setText(e.target.value)} placeholder="Tokyo rain at 2am, neon on wet asphalt" maxLength={200} aria-label="Describe a sky" readOnly={sky.busy} enterKeyHint="go" />
-        <button className="l-pill dark" disabled={!text.trim() || sky.busy}>
-          {sky.busy ? 'Painting…' : 'Generate'}
-        </button>
-      </form>
-      <div className="l-try-chips">
-        {TRY.map((t) => (
-          <button
-            key={t}
-            disabled={sky.busy}
-            onClick={() => {
-              setText(t);
-              sky.generate(t);
-            }}
-          >
-            {t}
-          </button>
-        ))}
+      ),
+    },
+    {
+      n: '03',
+      title: 'Use it',
+      body: 'A phone wallpaper, code for your site, a print, a film, or a light piece for your wall.',
+      g: 'SKYSPACE',
+      art: (
+        <span className="l-how-uses" aria-hidden>
+          {['Wallpaper', 'CSS', 'Poster', 'Film', 'LED'].map((u) => (
+            <b key={u}>{u}</b>
+          ))}
+        </span>
+      ),
+    },
+  ];
+  return (
+    <section className="l-how" id="how">
+      <div className="l-section-head">
+        <h2>How it works.</h2>
+        <p>Three steps, no design skills needed.</p>
       </div>
-      {sky.error && <p className="l-try-error">{sky.error}</p>}
-      <p className="l-try-hint">Claude paints it right onto the sky above. Like it? Press “Open this sky”.</p>
+      <ol className="l-how-steps">
+        {steps.map((st) => (
+          <li key={st.n}>
+            <div className="l-how-art">
+              <Thumb g={preset(st.g)} w={480} h={300} className="l-how-thumb" />
+              {st.art}
+            </div>
+            <span className="l-how-n">{st.n}</span>
+            <h3>{st.title}</h3>
+            <p>{st.body}</p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -521,23 +589,44 @@ function Features() {
   );
 }
 
-function Community() {
+const PAGE = 24;
+
+/** The community wall: a few on the home page, everything (a page at a time) on /community. */
+function CommunityWall({ limit = PAGE, full = false }: { limit?: number; full?: boolean }) {
   const session = useAuth((s) => s.session);
   const [sort, setSort] = useState<Sort>('new');
   const [items, setItems] = useState<SharedGradient[] | null>(null);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     if (!accountsEnabled) return;
     setError(null);
     try {
-      setItems(await listCommunity(sort));
+      const rows = await listCommunity(sort, limit + 1);
+      setMore(rows.length > limit);
+      setItems(rows.slice(0, limit));
     } catch (e) {
       setError((e as Error).message);
       setItems([]);
     }
-  }, [sort]);
+  }, [sort, limit]);
+
+  const loadMore = async () => {
+    if (!items || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const rows = await listCommunity(sort, PAGE + 1, items.length);
+      setMore(rows.length > PAGE);
+      setItems([...items, ...rows.slice(0, PAGE)]);
+    } catch {
+      /* keep what we have */
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -567,10 +656,10 @@ function Community() {
   const featured = useMemo(() => ['ALPENGLOW', 'SOLAR WIND', 'LAGOON', 'DUNE EMBER', 'CHERRY RAIN', 'CREVASSE', 'MAGMA VEIN', 'LAVENDER ROW'].map(preset), []);
 
   return (
-    <section className="l-community" id="community">
+    <section className={`l-community ${full ? 'full' : ''}`} id="community">
       <div className="l-section-head row">
         <div>
-          <h2>From the community.</h2>
+          {full ? <h1>Community skies.</h1> : <h2>From the community.</h2>}
           <p>{accountsEnabled ? 'Gradients people made and shared. Tap one to see it full size, then remix it in the studio.' : 'Featured skies. Sharing opens when accounts are switched on.'}</p>
         </div>
         {accountsEnabled && (
@@ -624,10 +713,49 @@ function Community() {
       </div>
       {accountsEnabled && items && items.length === 0 && !error && <p className="l-muted">Nothing shared yet. Be the first: make something in the studio and press SHARE.</p>}
       <div className="l-community-cta">
+        {full ? (
+          more && (
+            <button className="l-pill ghost" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </button>
+          )
+        ) : (
+          accountsEnabled &&
+          items &&
+          items.length > 0 && (
+            <a className="l-pill ghost" {...linkTo('/community')}>
+              See all community skies →
+            </a>
+          )
+        )}
         <a className="l-pill dark" {...linkTo('/studio')}>
           Make one and share it →
         </a>
       </div>
     </section>
+  );
+}
+
+/** /community: every shared sky, newest or most liked, a page at a time. */
+export function CommunityPage() {
+  useEffect(() => {
+    document.title = 'Community · Atmos';
+    return () => {
+      document.title = 'Atmos — gradients drawn from the sky';
+    };
+  }, []);
+  return (
+    <div className="landing">
+      <LandingNav />
+      <CommunityWall full />
+      <footer className="l-foot">
+        <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
+        <span className="l-foot-links">
+          <a {...linkTo('/')}>HOME</a>
+          <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
+        </span>
+        <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
+      </footer>
+    </div>
   );
 }

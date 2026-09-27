@@ -119,8 +119,8 @@ export type Sort = 'new' | 'top';
 const hydrateRow = (r: Record<string, unknown>) => ({ ...r, gradient: hydrateGradient((r.gradient ?? {}) as Partial<Gradient>) }) as SharedGradient;
 
 /** The community wall: listed shares only. */
-export async function listCommunity(sort: Sort, limit = 24): Promise<SharedGradient[]> {
-  const q = need().from('community_gradients').select('*').eq('listed', true).limit(limit);
+export async function listCommunity(sort: Sort, limit = 24, offset = 0): Promise<SharedGradient[]> {
+  const q = need().from('community_gradients').select('*').eq('listed', true).range(offset, offset + limit - 1);
   const { data, error } = await (sort === 'top' ? q.order('likes', { ascending: false }).order('created_at', { ascending: false }) : q.order('created_at', { ascending: false }));
   if (error) throw new Error(error.message);
   return (data ?? []).map(hydrateRow);

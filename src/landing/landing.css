@@ -233,3 +233,57 @@
 .l-lab-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .l-lab-sky { position: absolute; top: 22px; left: 24px; right: 24px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: rgba(244, 241, 234, 0.6); }
 .l-lab-cap.ink { color: rgba(17, 17, 17, 0.55); }
+
+/* ---------------------------------------------------------------- hero: describe a sky */
+.l-ask { display: flex; align-items: center; gap: 8px; max-width: 620px; margin-top: 30px; background: #fff; border-radius: 999px; padding: 6px 6px 6px 22px; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.04); }
+.l-ask input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 17px; color: #111; padding: 10px 0; letter-spacing: -0.01em; }
+.l-ask input::placeholder { color: #8a877f; }
+.l-ask .l-pill { padding: 12px 20px; }
+.l-ask .l-pill:disabled { opacity: 0.35; }
+.l-ask-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; max-width: 640px; }
+.l-ask-chips button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; color: inherit; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; opacity: 0.9; }
+.l-hero.ink-dark .l-ask-chips button { background: rgba(255, 255, 255, 0.4); border-color: rgba(0, 0, 0, 0.12); }
+.l-ask-chips button:disabled { opacity: 0.5; }
+.l-ask-alt { margin: 18px 0 0; font-size: 15px; opacity: 0.8; }
+.l-ask-alt a, .l-ask-alt button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.l-ask-error { margin: 12px 0 0; font-size: 14px; color: #ffd0d0; }
+@media (max-width: 480px) {
+  .l-ask { flex-wrap: wrap; border-radius: 22px; padding: 8px; }
+  .l-ask input { flex-basis: 100%; padding: 8px 10px; font-size: 16px; }
+  .l-ask .l-pill { width: 100%; }
+}
+
+/* ---------------------------------------------------------------- how it works */
+.l-how { max-width: 1280px; margin: 0 auto; padding: 110px 8px 0; }
+.l-how-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: none; }
+.l-how-steps li { display: flex; flex-direction: column; gap: 10px; }
+.l-how-art { position: relative; aspect-ratio: 16 / 10; border-radius: 22px; overflow: hidden; background: var(--l-line); margin-bottom: 12px; }
+.l-how-art .l-how-thumb, .l-how-art .l-how-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.l-how-n { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--l-sub); }
+.l-how-steps h3 { font-size: 26px; letter-spacing: -0.035em; font-weight: 650; }
+.l-how-steps p { margin: 0; color: var(--l-sub); font-size: 16px; line-height: 1.5; max-width: 28em; }
+.l-how-prompt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; background: rgba(255, 255, 255, 0.92); color: #111; font-size: 14px; padding: 10px 16px; border-radius: 999px; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.4); }
+.l-how-prompt::after { content: ''; display: inline-block; width: 1.5px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #111; animation: caret 1s steps(1) infinite; }
+@keyframes caret { 50% { opacity: 0; } }
+.l-how-dots i { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.l-how-uses { position: absolute; inset: auto 14px 14px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.l-how-uses b { font-family: var(--mono); font-weight: 400; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; padding: 5px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+@media (max-width: 860px) {
+  .l-how { padding-top: 80px; }
+  .l-how-steps { grid-template-columns: 1fr; gap: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .l-how-prompt::after { animation: none; } }
+
+/* ---------------------------------------------------------------- community page + footer links */
+.l-community.full { padding-top: 40px; }
+.l-community.full h1 { font-size: clamp(40px, 6vw, 76px); line-height: 1; letter-spacing: -0.05em; font-weight: 650; }
+.l-community-cta { gap: 12px; flex-wrap: wrap; }
+.l-foot-links { display: flex; gap: 18px; }
+.l-foot-links a:hover { color: var(--l-ink); }
+@media (max-width: 480px) {
+  .l-ask { margin-top: 24px; }
+  .l-ask-chips { flex-wrap: nowrap; overflow-x: auto; margin-right: -24px; padding-right: 24px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .l-ask-chips::-webkit-scrollbar { display: none; }
+  .l-ask-chips button { flex: none; }
+  .l-hero .l-eyebrow { display: none; }
+}

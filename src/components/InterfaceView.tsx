@@ -9,6 +9,18 @@ import { useStore } from '../store';
 import type { Gradient, UiScreen, UiStyle, UiTarget } from '../types';
 import { Field, Section, Seg } from './ui';
 
+// The serif and grotesk faces are only used here, so they load when Interface mode opens.
+let extraFonts = false;
+function loadInterfaceFonts() {
+  if (extraFonts || typeof document === 'undefined') return;
+  extraFonts = true;
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap';
+  document.head.appendChild(l);
+}
+loadInterfaceFonts();
+
 const LIGHT_TEXT: RGB = [1, 1, 1];
 const DARK_TEXT: RGB = hexToRgb('#141414');
 

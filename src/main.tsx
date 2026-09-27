@@ -1,9 +1,11 @@
-import { StrictMode } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
 import { AuthDialog } from './components/AuthDialog';
-import Landing from './landing/Landing';
-import LedLab from './led/LedLab';
+import Landing, { CommunityPage } from './landing/Landing';
+
+// The studio and the Lab load their own code only when opened, so the home page stays light.
+const App = lazy(() => import('./App'));
+const LedLab = lazy(() => import('./led/LedLab'));
 import { accountsEnabled, useAuth } from './lib/supabase';
 import { navigate, usePath } from './router';
 import { useEffect } from 'react';
@@ -36,13 +38,14 @@ function Root() {
   const share = /^\/g\/([A-Za-z0-9_-]{4,40})\/?$/.exec(path)?.[1];
   let page = <Landing key={share ?? 'home'} slug={share} />;
   if (/^\/led\/?$/.test(path)) page = <LedLab />;
+  if (/^\/community\/?$/.test(path)) page = <CommunityPage />;
   if (studio) {
     if (!accountsEnabled || session) page = <App />;
     else page = ready ? <StudioGate /> : <div className="gate-wait" />;
   }
   return (
     <>
-      {page}
+      <Suspense fallback={<div className="gate-wait" />}>{page}</Suspense>
       <AuthDialog />
     </>
   );

@@ -1,54 +1,14 @@
 // The live canvas: WebGL render + draggable handles for mesh points, centres and angles.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { gradientKey, MAX_POINTS, sortedStops, uid } from '../lib/gradient';
-import { GradientRenderer, grainScale, renderPixels } from '../render/renderer';
+import { grainScale, renderPixels } from '../render/renderer';
 import { luminance, rgbToHex } from '../lib/color';
 import { nameForColor } from '../data/names';
 import { useStore } from '../store';
 import type { Gradient } from '../types';
+import { usePointer, useRenderLoop } from '../render/loop';
 
-/**
- * Drives a WebGL canvas. Redraws when deps change or the canvas resizes, and every
- * frame only while `animating` — a still gradient costs nothing between edits.
- */
-function useRenderLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>, draw: (r: GradientRenderer, t: number) => void, deps: unknown[], animating: boolean) {
-  const rRef = useRef<GradientRenderer | null>(null);
-  const drawRef = useRef(draw);
-  drawRef.current = draw;
-  const dirty = useRef(true);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    try {
-      rRef.current = new GradientRenderer(canvasRef.current);
-      dirty.current = true;
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }, [canvasRef]);
-  useEffect(() => {
-    dirty.current = true;
-    let raf = 0;
-    const loop = (t: number) => {
-      const r = rRef.current, c = canvasRef.current;
-      if (r && c) {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
-        if (w !== c.width || h !== c.height) dirty.current = true;
-        if (dirty.current || animating) {
-          r.setSize(w, h);
-          drawRef.current(r, t);
-          dirty.current = false;
-        }
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, animating]);
-  return { renderer: rRef, error };
-}
+export { usePointer, useRenderLoop };
 
 export function GradientCanvas({ compare }: { compare: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,41 +71,6 @@ export function GradientCanvas({ compare }: { compare: boolean }) {
   );
 }
 
-/**
- * Smoothed pointer position over an element, for cursor-reactive gradients.
- * `step()` eases towards the real pointer once per frame and fades presence in/out.
- */
-export function usePointer(ref: React.RefObject<HTMLElement | null>) {
-  const st = useRef({ x: 0.5, y: 0.5, tx: 0.5, ty: 0.5, presence: 0, inside: false });
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const move = (e: PointerEvent) => {
-      const r = el.getBoundingClientRect();
-      st.current.tx = (e.clientX - r.left) / r.width;
-      st.current.ty = (e.clientY - r.top) / r.height;
-      st.current.inside = true;
-    };
-    const leave = () => void (st.current.inside = false);
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerdown', move);
-    el.addEventListener('pointerleave', leave);
-    return () => {
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerdown', move);
-      el.removeEventListener('pointerleave', leave);
-    };
-  }, [ref]);
-  return {
-    step() {
-      const s = st.current;
-      s.x += (s.tx - s.x) * 0.12;
-      s.y += (s.ty - s.y) * 0.12;
-      s.presence += ((s.inside ? 1 : 0) - s.presence) * 0.06;
-      return { x: s.x, y: s.y, presence: s.presence };
-    },
-  };
-}
 
 /** Approximate ramp position for a canvas point (used when adding colours by double-click). */
 function rampPosAt(g: Gradient, x: number, y: number): number {
@@ -345,4 +270,3 @@ function Handles({ wrapRef }: { wrapRef: React.RefObject<HTMLDivElement | null> 
   );
 }
 
-export { useRenderLoop };
