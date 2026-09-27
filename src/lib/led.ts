@@ -3,6 +3,8 @@
 
 export type LedShape = 'rect' | 'circle' | 'oval';
 export type Wiring = 'serpentine' | 'rows';
+/** forward: LEDs face the diffuser. bounce: they face a white back panel. edge: one strip around the inside edge. */
+export type Mount = 'forward' | 'bounce' | 'edge';
 
 export interface LedSettings {
   frameW: number; // inside of the frame, mm
@@ -12,6 +14,7 @@ export interface LedSettings {
   margin: number; // mm kept clear inside the frame edge
   wiring: Wiring;
   start: 'top' | 'bottom'; // where the data line comes in (always from the left)
+  mount?: Mount;
 }
 
 export interface Led {
@@ -51,7 +54,7 @@ export const LED_TYPES = [
   { id: 'p10', label: 'Panel · 10 mm pitch (16×16)', pitch: 10, kind: 'panel' as const },
 ];
 
-export const DEFAULT_LED: LedSettings = { frameW: 12 * IN, frameH: 12 * IN, shape: 'rect', pitch: 1000 / 30, margin: 15, wiring: 'serpentine', start: 'top' };
+export const DEFAULT_LED: LedSettings = { frameW: 12 * IN, frameH: 12 * IN, shape: 'rect', pitch: 1000 / 30, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
 
 export const mmToIn = (mm: number) => mm / IN;
 export const inToMm = (inch: number) => inch * IN;
@@ -66,13 +69,55 @@ export function insideShape(s: LedSettings, x: number, y: number): boolean {
   return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
 }
 
-/** Lay LEDs on a grid centred in the frame, keep the ones inside the shape, and number them along the wiring. */
-export function buildLayout(s: LedSettings): LedLayout {
+/** The sampling grid: LED spacing across the frame, centred. Edge layouts sample the sky on it too. */
+export function gridFor(s: LedSettings) {
   const pitch = Math.max(2, s.pitch);
   const usableW = Math.max(0, s.frameW - 2 * s.margin), usableH = Math.max(0, s.frameH - 2 * s.margin);
   const cols = Math.max(1, Math.floor(usableW / pitch) + 1);
   const rows = Math.max(1, Math.floor(usableH / pitch) + 1);
-  const x0 = (s.frameW - (cols - 1) * pitch) / 2, y0 = (s.frameH - (rows - 1) * pitch) / 2;
+  return { pitch, cols, rows, x0: (s.frameW - (cols - 1) * pitch) / 2, y0: (s.frameH - (rows - 1) * pitch) / 2 };
+}
+
+/** One strip around the inside of the frame, clockwise from the data-in corner, following the shape. */
+function edgeLayout(s: LedSettings): LedLayout {
+  const { pitch, cols, rows, x0, y0 } = gridFor(s);
+  const m = s.margin, W = s.frameW, H = s.frameH;
+  // The outline as a dense polyline, starting at the data-in corner and running clockwise.
+  const pts: [number, number][] = [];
+  if (s.shape === 'rect') {
+    const c: [number, number][] = s.start === 'top' ? [[m, m], [W - m, m], [W - m, H - m], [m, H - m], [m, m]] : [[m, H - m], [m, m], [W - m, m], [W - m, H - m], [m, H - m]];
+    for (let k = 0; k < 4; k++) for (let j = 0; j < 50; j++) pts.push([c[k][0] + ((c[k + 1][0] - c[k][0]) * j) / 50, c[k][1] + ((c[k + 1][1] - c[k][1]) * j) / 50]);
+    pts.push(c[4]);
+  } else {
+    const rx = (s.shape === 'circle' ? Math.min(W, H) / 2 : W / 2) - m, ry = (s.shape === 'circle' ? Math.min(W, H) / 2 : H / 2) - m;
+    const a0 = s.start === 'top' ? (-3 * Math.PI) / 4 : (3 * Math.PI) / 4;
+    for (let j = 0; j <= 720; j++) {
+      const a = a0 + (j / 720) * Math.PI * 2; // increasing angle is clockwise with y pointing down
+      pts.push([W / 2 + Math.max(0, rx) * Math.cos(a), H / 2 + Math.max(0, ry) * Math.sin(a)]);
+    }
+  }
+  const leds: Led[] = [];
+  let travelled = 0, next = pitch / 2;
+  for (let j = 1; j < pts.length; j++) {
+    const [ax, ay] = pts[j - 1], [bx, by] = pts[j];
+    const seg = Math.hypot(bx - ax, by - ay);
+    while (seg > 0 && next <= travelled + seg) {
+      const t = (next - travelled) / seg;
+      const x = ax + (bx - ax) * t, y = ay + (by - ay) * t;
+      const col = Math.min(cols - 1, Math.max(0, Math.round((x - x0) / pitch)));
+      const row = Math.min(rows - 1, Math.max(0, Math.round((y - y0) / pitch)));
+      leds.push({ i: leds.length, col, row, x, y });
+      next += pitch;
+    }
+    travelled += seg;
+  }
+  return { cols, rows, leds, runs: leds.length ? 1 : 0 };
+}
+
+/** Lay LEDs on a grid centred in the frame, keep the ones inside the shape, and number them along the wiring. */
+export function buildLayout(s: LedSettings): LedLayout {
+  if (s.mount === 'edge') return edgeLayout(s);
+  const { pitch, cols, rows, x0, y0 } = gridFor(s);
   const leds: Led[] = [];
   let runs = 0;
   for (let k = 0; k < rows; k++) {
@@ -193,7 +238,8 @@ export function layoutJson(layout: LedLayout, s: LedSettings, name: string) {
       units: 'mm',
       frame: { width: +s.frameW.toFixed(1), height: +s.frameH.toFixed(1), shape: s.shape, margin: s.margin },
       pitch: +s.pitch.toFixed(2),
-      wiring: { mode: s.wiring, start: `${s.start}-left` },
+      mount: s.mount ?? 'forward',
+      wiring: { mode: s.mount === 'edge' ? 'loop' : s.wiring, start: `${s.start}-left` },
       grid: { cols: layout.cols, rows: layout.rows },
       count: layout.leds.length,
       leds: layout.leds.map((l) => [l.i, l.col, l.row, +l.x.toFixed(1), +l.y.toFixed(1)]),

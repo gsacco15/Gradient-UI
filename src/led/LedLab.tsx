@@ -4,7 +4,7 @@ import { COLLECTIONS } from '../data/collections';
 import { cloneGradient } from '../lib/gradient';
 import { download } from '../lib/exportCode';
 import { palette256, paletteFromGradient, renderEffect, WLED_EFFECTS, wledPaletteJson, type WledEffect } from '../lib/wled';
-import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, toLed, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
+import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, toLed, gridFor, type Mount, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
 import { GradientRenderer } from '../render/renderer';
 import { linkTo } from '../router';
 import { useStore } from '../store';
@@ -76,6 +76,8 @@ export default function LedLab() {
     }
   }, [s, look, source]);
 
+  // Bounce needs room behind the LEDs for the light to reach the back panel and come back.
+  const boxDepth = diffuserMm(s.pitch, look.diffusion) + (s.mount === 'bounce' ? 10 + s.pitch * 0.6 : 10);
   const set = (p: Partial<LedSettings>) => setS((o) => ({ ...o, ...p }));
   const frameId = FRAMES.find((f) => Math.abs(f.w - s.frameW) < 0.5 && Math.abs(f.h - s.frameH) < 0.5)?.id ?? 'custom';
   const typeId = LED_TYPES.find((t) => Math.abs(t.pitch - s.pitch) < 0.01)?.id ?? 'custom';
@@ -212,13 +214,24 @@ export default function LedLab() {
             </div>
           </Group>
 
+          <Group title="LED direction">
+            <Seg value={s.mount ?? 'forward'} onChange={(mount) => set({ mount })} options={[['forward', 'Face forward'], ['bounce', 'Bounce off back'], ['edge', 'Edge only']]} />
+            <p className="led-hint">{MOUNT_NOTES[s.mount ?? 'forward']}</p>
+          </Group>
+
           <Group title="Diffuser">
-            <Slider label="Distance from LEDs" value={look.diffusion} onChange={(diffusion) => setLook({ ...look, diffusion })} min={0} max={1} step={0.01} show={`${Math.round(diffuserMm(s.pitch, look.diffusion))} mm · ${diffuserLook(look.diffusion)}`} />
-            <p className="led-hint">How far the frosted sheet sits in front of the LEDs. Too close and you see each LED as a bright spot; about 1.5× the LED spacing and it melts into one smooth glow.</p>
+            <Slider label="Distance from LEDs" value={look.diffusion} onChange={(diffusion) => setLook({ ...look, diffusion })} min={0} max={1} step={0.01} show={`${Math.round(diffuserMm(s.pitch, look.diffusion))} mm · ${diffuserLook(look.diffusion, s.mount)}`} />
+            <p className="led-hint">
+              {s.mount === 'edge'
+                ? 'How deep the box is in front of the strip. Deeper boxes let the edge light reach further into the middle.'
+                : s.mount === 'bounce'
+                  ? 'How far the frosted sheet sits in front of the LEDs. The bounce off the back doubles the light’s path, so even a shallow box looks seamless.'
+                  : 'How far the frosted sheet sits in front of the LEDs. Too close and you see each LED as a bright spot; about 1.5× the LED spacing and it melts into one smooth glow.'}
+            </p>
           </Group>
 
           <Group title="Wiring">
-            <Seg value={s.wiring} onChange={(wiring) => set({ wiring })} options={[['serpentine', 'Zigzag'], ['rows', 'Same direction']]} />
+            {s.mount !== 'edge' && <Seg value={s.wiring} onChange={(wiring) => set({ wiring })} options={[['serpentine', 'Zigzag'], ['rows', 'Same direction']]} />}
             <Seg value={s.start} onChange={(start) => set({ start })} options={[['top', 'Data in top left'], ['bottom', 'Bottom left']]} />
             <label className="led-check">
               <input type="checkbox" checked={look.wires} onChange={(e) => setLook({ ...look, wires: e.target.checked })} /> Show the wiring path
@@ -235,12 +248,12 @@ export default function LedLab() {
             <dl className="led-stats">
               <Stat k="LEDs" v={stats.count.toLocaleString()} />
               <Stat k="Grid" v={`${layout.cols} × ${layout.rows}`} />
-              <Stat k="Strip pieces" v={`${layout.runs} rows`} />
+              <Stat k="Strip pieces" v={s.mount === 'edge' ? '1 loop' : `${layout.runs} rows`} />
               <Stat k="Strip to buy" v={`${stats.stripMeters} m`} />
               <Stat k="Power, typical" v={`${(stats.typicalAmps * 5).toFixed(0)} W`} />
               <Stat k="Power supply" v={stats.psu} />
               <Stat k="Max refresh" v={`${stats.maxFps} fps`} />
-              <Stat k="Box depth" v={`${Math.round(diffuserMm(s.pitch, look.diffusion) + 10)} mm · ${mmToIn(diffuserMm(s.pitch, look.diffusion) + 10).toFixed(1)} in`} />
+              <Stat k="Box depth" v={`${Math.round(boxDepth)} mm · ${mmToIn(boxDepth).toFixed(1)} in`} />
             </dl>
             <p className="led-hint">
               Numbers assume 5 V WS2812B-style LEDs. Inject power every ~150 LEDs so the far end doesn't fade. {stats.count > 800 ? 'Over ~800 LEDs is a lot for one WLED controller: use 30 LEDs/m or split across two controllers.' : ''}
@@ -278,10 +291,47 @@ export default function LedLab() {
 
 /** Diffuser distance in mm for the slider (0..1): from 0.3× to 2.2× the LED spacing. */
 const diffuserMm = (pitch: number, d: number) => pitch * (0.3 + 1.9 * d);
-const diffuserLook = (d: number) => {
+/** How far the light spreads before the diffuser, in LED spacings. */
+const spreadRatio = (mount: Mount | undefined, d: number) => {
   const r = diffuserMm(1, d);
+  return mount === 'bounce' ? r * 2 + 0.8 : mount === 'edge' ? 0.6 + r * 0.6 : r;
+};
+const diffuserLook = (d: number, mount?: Mount) => {
+  if (mount === 'edge') return 'wash';
+  const r = spreadRatio(mount, d);
   return r < 0.9 ? 'spotty' : r < 1.4 ? 'soft' : 'seamless';
 };
+
+/**
+ * Edge lighting: the strip around the rim shines across a white-lined box, so every point inside
+ * gets a blend of the nearby rim LEDs, dimming a little toward the middle.
+ */
+function edgeField(layout: LedLayout, s: LedSettings, rgb: Uint8Array, out: Uint8ClampedArray, gcols: number, grows: number) {
+  const { pitch, x0, y0 } = gridFor(s);
+  const half = Math.min(s.frameW, s.frameH) / 2;
+  const soft = (pitch * 2) ** 2;
+  for (let r = 0, p = 0; r < grows; r++) {
+    const y = y0 + (r - FILL_PAD) * pitch;
+    for (let c = 0; c < gcols; c++, p += 4) {
+      const x = x0 + (c - FILL_PAD) * pitch;
+      let R = 0, G = 0, B = 0, W = 0, dmin = Infinity;
+      for (const l of layout.leds) {
+        const d2 = (l.x - x) ** 2 + (l.y - y) ** 2;
+        const w = 1 / (d2 + soft);
+        R += rgb[l.i * 3] * w;
+        G += rgb[l.i * 3 + 1] * w;
+        B += rgb[l.i * 3 + 2] * w;
+        W += w;
+        if (d2 < dmin) dmin = d2;
+      }
+      const lum = W ? 1 - 0.35 * Math.min(1, Math.sqrt(dmin) / half) : 0;
+      out[p] = W ? (R / W) * lum : 0;
+      out[p + 1] = W ? (G / W) * lum : 0;
+      out[p + 2] = W ? (B / W) * lum : 0;
+      out[p + 3] = 255;
+    }
+  }
+}
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -391,12 +441,14 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
   // One pixel per grid cell, padded, with empty cells taking their nearest LED's colour: the
   // diffuser box's white walls bounce light into the gaps rather than leaving them black.
   const P = FILL_PAD;
-  const near = nearestLed(layout);
+  const mount = s.mount ?? 'forward';
   const gcols = layout.cols + 2 * P, grows = layout.rows + 2 * P;
   grid.width = gcols;
   grid.height = grows;
   const gctx = grid.getContext('2d')!;
   const img = gctx.createImageData(gcols, grows);
+  if (mount === 'edge') edgeField(layout, s, rgb, img.data, gcols, grows);
+  const near = mount === 'edge' ? new Int32Array(0) : nearestLed(layout);
   for (let c = 0, p = 0; c < near.length; c++, p += 4) {
     const i = near[c];
     if (i < 0) continue;
@@ -459,11 +511,12 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
     ctx.clip(inner);
     ctx.imageSmoothingEnabled = true;
     // Further from the LEDs, the light spreads wider and each LED's hot spot fades out.
-    const ratio = diffuserMm(1, look.diffusion);
-    ctx.filter = `blur(${Math.max(0.5, pitch * k * ratio * 0.7).toFixed(1)}px)`;
+    // Bouncing off the back roughly doubles the path and hides the LEDs; edge light is already a wash.
+    const ratio = spreadRatio(mount, look.diffusion);
+    ctx.filter = `blur(${Math.max(0.5, pitch * k * ratio * 0.7).toFixed(1)}px)${mount === 'bounce' ? ' brightness(0.88)' : ''}`;
     ctx.drawImage(grid, gx, gy, gw, gh);
     ctx.filter = 'none';
-    const hot = Math.min(1, Math.max(0, (1.4 - ratio) / 1.1));
+    const hot = mount === 'forward' ? Math.min(1, Math.max(0, (1.4 - ratio) / 1.1)) : 0;
     if (hot > 0) {
       ctx.globalCompositeOperation = 'lighter';
       const rad = pitch * k * (0.3 + 0.35 * ratio);
@@ -558,6 +611,12 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
     ctx.restore();
   }
 }
+
+const MOUNT_NOTES: Record<Mount, string> = {
+  forward: 'LEDs point straight at the diffuser. Sharpest picture; needs the most depth to hide the dots.',
+  bounce: 'LEDs point backward at a matte white back panel, and the diffuser only sees reflected light. Smoothest glow in a shallow box, slightly softer picture, about 10–20% dimmer.',
+  edge: 'One strip around the inside edge, shining inward across a white-lined box. Very few LEDs and an even Turrell-style wash, but only the edge colours can be controlled, so the middle is a blend.',
+};
 
 const FILL_PAD = 3;
 const nearCache = new WeakMap<LedLayout, Int32Array>();

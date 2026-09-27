@@ -65,3 +65,29 @@ describe('LED output', () => {
     expect(src).toContain('{1,2,3}');
   });
 });
+
+describe('LED direction', () => {
+  it('bounce uses the same grid as forward', () => {
+    expect(buildLayout({ ...DEFAULT_LED, mount: 'bounce' }).leds.length).toBe(buildLayout(DEFAULT_LED).leds.length);
+  });
+
+  it('edge lighting runs one strip around the inside edge', () => {
+    const s = { ...DEFAULT_LED, mount: 'edge' as const };
+    const l = buildLayout(s);
+    const perimeter = 4 * (s.frameW - 2 * s.margin);
+    expect(l.leds.length).toBe(Math.floor(perimeter / s.pitch - 0.5) + 1); // first LED half a step in
+    expect(l.runs).toBe(1);
+    expect(l.leds[0].x).toBeCloseTo(s.margin + s.pitch / 2);
+    expect(l.leds[0].y).toBeCloseTo(s.margin);
+    // steps between neighbours are one LED spacing (corners cut a little shorter)
+    for (let i = 1; i < l.leds.length; i++) expect(Math.hypot(l.leds[i].x - l.leds[i - 1].x, l.leds[i].y - l.leds[i - 1].y)).toBeLessThanOrEqual(s.pitch + 0.01);
+  });
+
+  it('edge lighting follows a circle', () => {
+    const s = { ...DEFAULT_LED, mount: 'edge' as const, shape: 'circle' as const };
+    const l = buildLayout(s);
+    const r = s.frameW / 2 - s.margin;
+    expect(Math.abs(l.leds.length - (2 * Math.PI * r) / s.pitch)).toBeLessThan(2);
+    for (const p of l.leds) expect(Math.hypot(p.x - s.frameW / 2, p.y - s.frameH / 2)).toBeCloseTo(r, 0);
+  });
+});
