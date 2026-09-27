@@ -435,3 +435,6 @@ a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 
 .opt-label.spaced { margin-top: 8px; }
 .describe-controls { font-size: 10px; letter-spacing: 0.06em; color: var(--muted); line-height: 1.6; margin: 0 0 10px; }
+.view-tabs .lab-link { margin-left: auto; color: var(--muted); }
+.view-tabs .lab-link + .how-link { margin-left: 16px; }
+.view-tabs .kbd-hint + .lab-link { margin-left: 16px; }

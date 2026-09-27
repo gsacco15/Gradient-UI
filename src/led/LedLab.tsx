@@ -97,7 +97,7 @@ export default function LedLab() {
     <div className="landing led">
       <nav className="l-nav">
         <a className="l-logo" {...linkTo('/')}>
-          Atmos<span>[ led lab ]</span>
+          Atmos<span>[ lab ]</span>
         </a>
         <div className="l-links" />
         <div className="l-actions">
@@ -272,6 +272,16 @@ export default function LedLab() {
           </Group>
         </aside>
       </div>
+
+      <footer className="l-foot">
+        <span>ATMOS [ LAB ] · LIGHT PIECES FROM YOUR SKIES</span>
+        <span className="led-foot-links">
+          <a {...linkTo('/')}>HOME</a>
+          <a {...linkTo('/studio')}>STUDIO</a>
+          <a {...linkTo('/#community')}>COMMUNITY</a>
+        </span>
+        <span>PREVIEWS ARE CLOSE APPROXIMATIONS OF REAL LEDS</span>
+      </footer>
     </div>
   );
 }

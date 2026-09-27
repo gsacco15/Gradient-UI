@@ -59,6 +59,9 @@ export default function App() {
             </button>
           ))}
           {view === 'gradient' && <span className="kbd-hint">DOUBLE-CLICK CANVAS TO ADD · HOLD C TO COMPARE · ⌘Z UNDO</span>}
+          <a className="how-link lab-link" {...linkTo('/led')} title="Preview this sky as an LED light piece and get the build sheet">
+            LED LAB ↗
+          </a>
           <button className="how-link" onClick={() => useStore.getState().set({ welcomeOpen: true })} title="Shortcut: ?">
             HOW IT WORKS
           </button>

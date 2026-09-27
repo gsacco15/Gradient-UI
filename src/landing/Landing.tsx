@@ -12,6 +12,7 @@ import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
 import horizonSample from './horizon-sample.webp';
+import labSample from './lab-sample.webp';
 import './landing.css';
 
 const preset = (name: string) => ALL_PRESETS.find((g) => g.name === name) ?? ALL_PRESETS[0];
@@ -53,6 +54,7 @@ function LandingNav({ bare = false }: { bare?: boolean }) {
           <>
             <a href="#features">Features</a>
             <a href="#community">Community</a>
+            <a {...linkTo('/led')}>Lab</a>
           </>
         )}
       </div>
@@ -89,6 +91,7 @@ function Home() {
       <Hero sky={sky} />
       <TryStrip sky={sky} />
       <Features />
+      <LabSection />
       <Community />
 
       <section className="l-final">
@@ -109,11 +112,57 @@ function Home() {
       <footer className="l-foot">
         <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
         <a {...linkTo('/led')} className="l-foot-link">
-          LED LAB · EXPERIMENTAL
+          ATMOS [ LAB ] · LED LIGHT PIECES
         </a>
         <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
       </footer>
     </div>
+  );
+}
+
+/** The LED Lab: your sky as a real light piece on the wall. */
+function LabSection() {
+  return (
+    <section className="l-lab" id="lab">
+      <div className="l-lab-card">
+        <div className="l-lab-art">
+          <img src={labSample} alt="An oval LED light piece glowing pink and violet on a dark wall: bare LEDs on the left half, the diffused glow on the right" loading="lazy" />
+          <span className="l-lab-cap l-lab-cap-l">BARE LEDS</span>
+          <span className="l-lab-cap l-lab-cap-r">DIFFUSED</span>
+        </div>
+        <div className="l-lab-text">
+          <span className="l-lab-tag">
+            <i /> NEW · ATMOS [ LAB ]
+          </span>
+          <h2>
+            Put your sky
+            <br />
+            on the wall.
+          </h2>
+          <p>Turn any gradient into a real LED light piece, in the spirit of James Turrell. Pick a frame and a shape, see it glow on your wall, and get everything you need to build it.</p>
+          <ul className="l-lab-points">
+            <li>
+              <strong>Any frame</strong>Picture-frame sizes, square, circle or oval, with or without a bezel.
+            </li>
+            <li>
+              <strong>See the light</strong>Bare LEDs or diffused glow, forward, bounce or edge-lit, day or night.
+            </li>
+            <li>
+              <strong>Build sheet</strong>LED count, strip length, power supply and box depth, worked out for you.
+            </li>
+            <li>
+              <strong>Send it</strong>Stream to your LEDs over USB, or export for WLED and Arduino.
+            </li>
+          </ul>
+          <div className="l-lab-actions">
+            <a className="l-pill light big" {...linkTo('/led')}>
+              Open the Lab →
+            </a>
+            <span className="l-lab-note">Free · works with WS2812B strips and WLED</span>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

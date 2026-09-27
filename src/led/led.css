@@ -53,9 +53,6 @@
   .led-stage-top span:first-child { display: none; }
   .led-panel select, .led-num input { font-size: 16px; }
 }
-@media (max-width: 480px) {
-  .led .l-logo span { display: none; }
-}
 
 /* Bigger, easier sliders */
 .led-slider input[type='range'] { appearance: none; -webkit-appearance: none; height: 32px; background: none; cursor: pointer; margin: 0; }
@@ -70,3 +67,12 @@
 .led-diagram svg { width: 100%; height: auto; display: block; }
 .led-dg-t { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.04em; fill: #6d6b66; }
 .led-diagram figcaption { font-size: 12px; color: var(--l-sub); margin-top: 4px; }
+
+.led .l-foot { margin-top: 64px; }
+.led-foot-links { display: flex; gap: 18px; }
+.led-foot-links a:hover { color: var(--l-ink); }
+.led .l-logo, .led .l-logo span { white-space: nowrap; }
+@media (max-width: 480px) {
+  .led-exp { font-size: 0; gap: 0; }
+  .led-exp::before { width: 7px; height: 7px; }
+}
