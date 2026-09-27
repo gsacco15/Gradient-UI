@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_PRESETS } from '../data/collections';
 import { useRenderLoop, usePointer } from '../components/Canvas';
 import { Thumb } from '../components/Thumb';
-import { luminance } from '../lib/color';
+import { hexToOklab, hexToRgb, luminance } from '../lib/color';
 import { cloneGradient } from '../lib/gradient';
 import { encodeGradient } from '../lib/share';
 import { generateFromText } from '../lib/textGradient';
@@ -126,9 +126,20 @@ function Home() {
 function LabSection({ g: heroSky }: { g: Gradient }) {
   // The hero pushes apertures and halos aside to make room for the headline; a light piece wants them centred.
   const g = useMemo(() => (heroSky.type === 'aperture' || heroSky.type === 'halo' ? { ...heroSky, center: { x: 0.5, y: 0.5 } } : heroSky), [heroSky]);
+  // The glow behind the text takes the piece's two most luminous, colourful tones.
+  const glow = useMemo(() => {
+    const ranked = [...new Set(g.points.map((p) => p.color.toUpperCase()))]
+      .map((c) => {
+        const [L, a, b] = hexToOklab(c);
+        return { c, score: Math.hypot(a, b) * 2 + L * 0.35 };
+      })
+      .sort((x, y) => y.score - x.score);
+    const rgb = (i: number) => hexToRgb((ranked[Math.min(i, ranked.length - 1)] ?? { c: '#C24DF0' }).c).map((v) => Math.round(v * 255)).join(', ');
+    return { '--lab-a': rgb(0), '--lab-b': rgb(1) } as React.CSSProperties;
+  }, [g]);
   return (
     <section className="l-lab" id="lab">
-      <div className="l-lab-card">
+      <div className="l-lab-card" style={glow}>
         <div className="l-lab-art">
           <LedPiece g={g} className="l-lab-canvas" />
           <span className="l-lab-sky">{g.name} · AS A LIGHT PIECE</span>

@@ -205,15 +205,16 @@
 /* ---------------------------------------------------------------- lab */
 .l-lab { max-width: 1280px; margin: 0 auto; padding: 110px 0 0; }
 .l-lab-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-radius: 32px; overflow: hidden; background: #110d17; color: #f4f1ea; isolation: isolate; }
-.l-lab-card::before { content: ''; position: absolute; inset: -20%; z-index: -1; background: radial-gradient(40% 50% at 28% 50%, rgba(194, 77, 240, 0.35), transparent 70%), radial-gradient(30% 40% at 30% 55%, rgba(255, 143, 176, 0.25), transparent 70%); }
+.l-lab-card { --lab-a: 194, 77, 240; --lab-b: 255, 143, 176; }
+.l-lab-card::before { content: ''; position: absolute; inset: -20%; z-index: -1; background: radial-gradient(40% 50% at 28% 50%, rgba(var(--lab-a), 0.35), transparent 70%), radial-gradient(30% 40% at 30% 55%, rgba(var(--lab-b), 0.25), transparent 70%); transition: background 0.6s ease; }
 .l-lab-art { position: relative; aspect-ratio: 4 / 5; }
 .l-lab-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .l-lab-cap { position: absolute; bottom: 22px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: rgba(244, 241, 234, 0.6); }
 .l-lab-cap-l { left: 24px; }
 .l-lab-cap-r { right: 24px; }
 .l-lab-text { padding: clamp(32px, 5vw, 72px); display: flex; flex-direction: column; justify-content: center; gap: 22px; }
-.l-lab-tag { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: #e8b7ff; }
-.l-lab-tag i { width: 8px; height: 8px; border-radius: 50%; background: #ff8fb0; box-shadow: 0 0 0 4px rgba(255, 143, 176, 0.18), 0 0 18px #ff8fb0; }
+.l-lab-tag { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: rgba(244, 241, 234, 0.8); }
+.l-lab-tag i { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--lab-b)); box-shadow: 0 0 0 4px rgba(var(--lab-b), 0.18), 0 0 18px rgb(var(--lab-b)); }
 .l-lab-text h2 { font-size: clamp(40px, 5.4vw, 76px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 650; }
 .l-lab-text > p { margin: 0; font-size: 18px; line-height: 1.5; color: rgba(244, 241, 234, 0.72); max-width: 32em; }
 .l-lab-points { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }

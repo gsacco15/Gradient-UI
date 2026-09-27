@@ -140,8 +140,9 @@ export default function LedLab() {
   useEffect(() => {
     if (linked) history.replaceState(null, '', '/led');
   }, [linked]);
-  const [s, setS] = useState<LedSettings>(initial.s);
-  const [look, setLook] = useState<Look>(initial.look);
+  // Arriving from the home page's light piece: show it in the same oval. Otherwise keep your own frame.
+  const [s, setS] = useState<LedSettings>(linked ? { ...initial.s, frameW: PIECE.frameW, frameH: PIECE.frameH, shape: PIECE.shape, margin: PIECE.margin } : initial.s);
+  const [look, setLook] = useState<Look>(linked ? { ...initial.look, bezelWidth: 'none' } : initial.look);
   const [source, setSource] = useState(linked ? 'linked' : initial.source);
   const studio = useStore((st) => st.gradient);
   const src = useMemo(
