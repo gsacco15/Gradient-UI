@@ -108,6 +108,9 @@ function Home() {
 
       <footer className="l-foot">
         <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
+        <a {...linkTo('/led')} className="l-foot-link">
+          LED LAB · EXPERIMENTAL
+        </a>
         <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
       </footer>
     </div>

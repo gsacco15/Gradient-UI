@@ -1,0 +1,58 @@
+/* LED Lab. Sits on the landing page's look: warm paper, black pills, mono labels. */
+.led { padding-bottom: 24px; }
+.led-exp { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l-sub); display: inline-flex; align-items: center; gap: 6px; }
+.led-exp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+.led-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.led-stage { position: sticky; top: 16px; border-radius: 28px; overflow: hidden; height: min(calc(100vh - 120px), 820px); min-height: 440px; background: #0e0d0c; color: #fff; transition: background 0.3s; }
+.led-stage.room-light { background: #e9e6df; color: #111; }
+.led-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.led-stage-top, .led-stage-bar { position: absolute; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 22px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.led-stage-top { top: 0; opacity: 0.75; }
+.led-stage-bar { bottom: 0; justify-content: flex-start; flex-wrap: wrap; }
+.led-stage .led-seg { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.16); }
+.led-stage .led-seg button { color: inherit; }
+.led-stage .led-seg button.on { background: rgba(255, 255, 255, 0.9); color: #111; }
+.led-stage.room-light .led-seg { background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.12); }
+.led-stage.room-light .led-seg button.on { background: #111; color: #fff; }
+.led-chip { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; padding: 7px 12px; border-radius: 999px; border: 1px solid currentColor; background: none; opacity: 0.85; cursor: pointer; }
+
+.led-panel { background: var(--l-card); border-radius: 24px; padding: 6px 20px 20px; box-shadow: 0 0 0 1px var(--l-line); }
+.led-group { padding: 16px 0; border-bottom: 1px solid var(--l-line); display: flex; flex-direction: column; gap: 10px; }
+.led-group:last-child { border-bottom: 0; }
+.led-group h3 { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--l-sub); }
+.led-panel select, .led-num input { width: 100%; font: inherit; font-size: 15px; color: var(--l-ink); background: var(--l-bg); border: 1px solid var(--l-line); border-radius: 12px; padding: 10px 12px; }
+.led-panel select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, #888 50%), linear-gradient(135deg, #888 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+.led-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.led-num { display: flex; flex-direction: column; gap: 4px; }
+.led-num span, .led-slider span { font-size: 12.5px; color: var(--l-sub); }
+.led-seg { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--l-bg); border: 1px solid var(--l-line); }
+.led-seg button { flex: 1; font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 999px; border: 0; background: none; color: var(--l-sub); cursor: pointer; white-space: nowrap; }
+.led-seg button.on { background: var(--l-ink); color: #fff; }
+.led-stage-bar .led-seg { flex: 0 0 auto; }
+.led-stage-bar .led-seg button { font-size: 12px; padding: 6px 12px; }
+.led-slider { display: flex; flex-direction: column; gap: 6px; }
+.led-slider span { display: flex; justify-content: space-between; }
+.led-slider em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--l-ink); }
+.led-slider input { width: 100%; accent-color: var(--l-ink); }
+.led-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--l-sub); }
+.led-check input { accent-color: var(--l-ink); width: 16px; height: 16px; }
+.led-hint { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--l-sub); }
+.led-hint.strong { color: var(--l-ink); }
+.led-stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.led-stats div { display: flex; flex-direction: column; gap: 2px; }
+.led-stats dt { font-size: 12px; color: var(--l-sub); }
+.led-stats dd { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+.led-actions { display: flex; flex-direction: column; gap: 8px; }
+.led-actions .l-pill { width: 100%; }
+.led-actions .l-pill:disabled { opacity: 0.45; }
+
+@media (max-width: 900px) {
+  .led-grid { grid-template-columns: 1fr; }
+  .led-stage { position: relative; top: 0; height: 62svh; min-height: 380px; border-radius: 22px; }
+  .led-stage-top span:first-child { display: none; }
+  .led-panel select, .led-num input { font-size: 16px; }
+}
+@media (max-width: 480px) {
+  .led .l-logo span { display: none; }
+}

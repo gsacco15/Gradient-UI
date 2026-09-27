@@ -1,0 +1,634 @@
+// LED Lab: preview a gradient as a wall-mounted LED light piece, size the build, and send it to real LEDs.
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { COLLECTIONS } from '../data/collections';
+import { cloneGradient } from '../lib/gradient';
+import { download } from '../lib/exportCode';
+import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
+import { GradientRenderer } from '../render/renderer';
+import { linkTo } from '../router';
+import { useStore } from '../store';
+import type { Gradient } from '../types';
+import '../landing/landing.css';
+import './led.css';
+
+type View = 'diffused' | 'leds' | 'split';
+
+interface Look {
+  view: View;
+  diffusion: number; // 0..1
+  brightness: number; // 0.05..1
+  gamma: number;
+  room: 'dark' | 'light';
+  wires: boolean;
+  playing: boolean;
+}
+
+const SETTINGS_KEY = 'atmos.led';
+const load = (): { s: LedSettings; look: Look; source: string } => {
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true }, source: 'studio' };
+  try {
+    const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
+    return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/** LEDs can't show film grain or dither, and nobody hovers over a wall piece. */
+function forLeds(src: Gradient): Gradient {
+  const g = cloneGradient(src, false);
+  g.weather = { ...g.weather, haze: 0, frost: 0, pixel: 0 };
+  g.interact = { mode: 'none', strength: 0 };
+  return g;
+}
+
+export default function LedLab() {
+  const initial = useMemo(load, []);
+  const [s, setS] = useState<LedSettings>(initial.s);
+  const [look, setLook] = useState<Look>(initial.look);
+  const [source, setSource] = useState(initial.source);
+  const studio = useStore((st) => st.gradient);
+  const src = useMemo(() => (source === 'studio' ? studio : COLLECTIONS.flatMap((c) => c.gradients).find((g) => g.name === source) ?? studio), [source, studio]);
+  const g = useMemo(() => forLeds(src), [src]);
+  const layout = useMemo(() => buildLayout(s), [s]);
+  const stats = useMemo(() => ledStats(layout, s, look.brightness), [layout, s, look.brightness]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ s, look, source }));
+    } catch {
+      /* private mode */
+    }
+  }, [s, look, source]);
+
+  const set = (p: Partial<LedSettings>) => setS((o) => ({ ...o, ...p }));
+  const frameId = FRAMES.find((f) => Math.abs(f.w - s.frameW) < 0.5 && Math.abs(f.h - s.frameH) < 0.5)?.id ?? 'custom';
+  const typeId = LED_TYPES.find((t) => Math.abs(t.pitch - s.pitch) < 0.01)?.id ?? 'custom';
+
+  const serial = useSerial();
+  const engine = useLedEngine(g, layout, s, look, serial.send);
+
+  return (
+    <div className="landing led">
+      <nav className="l-nav">
+        <a className="l-logo" {...linkTo('/')}>
+          Atmos<span>[ led lab ]</span>
+        </a>
+        <div className="l-links" />
+        <div className="l-actions">
+          <span className="led-exp">Experimental</span>
+          <a className="l-pill dark" {...linkTo('/studio')}>
+            Open studio
+          </a>
+        </div>
+      </nav>
+
+      <div className="led-grid">
+        <section className={`led-stage room-${look.room}`}>
+          <canvas ref={engine.canvas} className="led-canvas" aria-label={`${g.name} on ${stats.count} LEDs`} />
+          <div className="led-stage-top">
+            <span>
+              {g.name} · {g.place}
+            </span>
+            <span>
+              {mmToIn(s.frameW).toFixed(1)} × {mmToIn(s.frameH).toFixed(1)} in · {stats.count} LEDs
+            </span>
+          </div>
+          <div className="led-stage-bar">
+            <Seg value={look.view} onChange={(view) => setLook({ ...look, view })} options={[['diffused', 'Diffused'], ['leds', 'Bare LEDs'], ['split', 'Split']]} />
+            <Seg value={look.room} onChange={(room) => setLook({ ...look, room })} options={[['dark', 'Dark room'], ['light', 'Daylight']]} />
+            {g.motion.mode !== 'none' && (
+              <button className="led-chip" onClick={() => setLook({ ...look, playing: !look.playing })}>
+                {look.playing ? 'Pause' : 'Play'}
+              </button>
+            )}
+          </div>
+        </section>
+
+        <aside className="led-panel">
+          <Group title="Sky">
+            <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Gradient">
+              <option value="studio">Your studio sky · {studio.name}</option>
+              {COLLECTIONS.map((c) => (
+                <optgroup key={c.id} label={c.title}>
+                  {c.gradients.map((p) => (
+                    <option key={p.id} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </Group>
+
+          <Group title="Frame">
+            <select
+              value={frameId}
+              onChange={(e) => {
+                const f = FRAMES.find((x) => x.id === e.target.value);
+                if (f) set({ frameW: f.w, frameH: f.h });
+              }}
+              aria-label="Frame size"
+            >
+              {FRAMES.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+              <option value="custom">Custom</option>
+            </select>
+            <div className="led-two">
+              <Num label="Width (in)" value={mmToIn(s.frameW)} onChange={(v) => set({ frameW: inToMm(v) })} min={3} max={96} />
+              <Num label="Height (in)" value={mmToIn(s.frameH)} onChange={(v) => set({ frameH: inToMm(v) })} min={3} max={96} />
+            </div>
+            <Seg value={s.shape} onChange={(shape: LedShape) => set({ shape })} options={[['rect', s.frameW === s.frameH ? 'Square' : 'Rectangle'], ['circle', 'Circle'], ['oval', 'Oval']]} />
+          </Group>
+
+          <Group title="LEDs">
+            <select
+              value={typeId}
+              onChange={(e) => {
+                const t = LED_TYPES.find((x) => x.id === e.target.value);
+                if (t) set({ pitch: t.pitch });
+              }}
+              aria-label="LED type"
+            >
+              {LED_TYPES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+              <option value="custom">Custom spacing</option>
+            </select>
+            <div className="led-two">
+              <Num label="Spacing (mm)" value={s.pitch} onChange={(pitch) => set({ pitch })} min={4} max={100} step={0.5} />
+              <Num label="Edge gap (mm)" value={s.margin} onChange={(margin) => set({ margin })} min={0} max={100} step={1} />
+            </div>
+          </Group>
+
+          <Group title="Diffuser">
+            <Slider label="Softness" value={look.diffusion} onChange={(diffusion) => setLook({ ...look, diffusion })} min={0} max={1} step={0.01} show={`${Math.round(s.pitch * (0.6 + 1.6 * look.diffusion))} mm deep`} />
+            <p className="led-hint">For a seamless glow, mount the diffuser about 1 to 2 times the LED spacing away from the LEDs.</p>
+          </Group>
+
+          <Group title="Wiring">
+            <Seg value={s.wiring} onChange={(wiring) => set({ wiring })} options={[['serpentine', 'Zigzag'], ['rows', 'Same direction']]} />
+            <Seg value={s.start} onChange={(start) => set({ start })} options={[['top', 'Data in top left'], ['bottom', 'Bottom left']]} />
+            <label className="led-check">
+              <input type="checkbox" checked={look.wires} onChange={(e) => setLook({ ...look, wires: e.target.checked })} /> Show the wiring path
+            </label>
+          </Group>
+
+          <Group title="Output">
+            <Slider label="Brightness" value={look.brightness} onChange={(brightness) => setLook({ ...look, brightness })} min={0.05} max={1} step={0.01} show={`${Math.round(look.brightness * 100)}%`} />
+            <Slider label="Gamma" value={look.gamma} onChange={(gamma) => setLook({ ...look, gamma })} min={1} max={3} step={0.1} show={look.gamma.toFixed(1)} />
+          </Group>
+
+          <Group title="Build sheet">
+            <dl className="led-stats">
+              <Stat k="LEDs" v={stats.count.toLocaleString()} />
+              <Stat k="Grid" v={`${layout.cols} × ${layout.rows}`} />
+              <Stat k="Strip pieces" v={`${layout.runs} rows`} />
+              <Stat k="Strip to buy" v={`${stats.stripMeters} m`} />
+              <Stat k="Power, typical" v={`${(stats.typicalAmps * 5).toFixed(0)} W`} />
+              <Stat k="Power supply" v={stats.psu} />
+              <Stat k="Max refresh" v={`${stats.maxFps} fps`} />
+            </dl>
+            <p className="led-hint">
+              Numbers assume 5 V WS2812B-style LEDs. Inject power every ~150 LEDs so the far end doesn't fade. {stats.count > 1000 ? 'Over 1,000 LEDs: split the data across several pins to keep it smooth.' : ''}
+            </p>
+          </Group>
+
+          <Group title="Send to LEDs">
+            <div className="led-actions">
+              {serial.supported ? (
+                <button className={`l-pill ${serial.connected ? 'ghost' : 'dark'}`} onClick={serial.connected ? serial.disconnect : serial.connect}>
+                  {serial.connected ? 'Disconnect USB' : 'Stream over USB'}
+                </button>
+              ) : (
+                <button className="l-pill ghost" disabled title="Web Serial needs Chrome or Edge on a computer">
+                  Stream over USB (Chrome)
+                </button>
+              )}
+              <button className="l-pill ghost" onClick={() => engine.exportSketch(src.name)} disabled={engine.exporting}>
+                {engine.exporting ? 'Rendering…' : 'Arduino sketch'}
+              </button>
+              <button className="l-pill ghost" onClick={() => download(`atmos-${slug(src.name)}-led-map.json`, layoutJson(layout, s, src.name), 'application/json')}>
+                LED map (JSON)
+              </button>
+            </div>
+            {serial.status && <p className="led-hint strong">{serial.status}</p>}
+            <p className="led-hint">
+              USB streaming sends Adalight frames at 115200 baud, which WLED and most LED boards understand. The Arduino sketch plays this sky on its own with FastLED, no computer needed.
+            </p>
+          </Group>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** Renders the sky at one pixel per LED every frame, draws the preview, and hands frames to the serial port. */
+function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look, send: (rgb: Uint8Array) => void) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const state = useRef({ g, layout, s, look, send });
+  state.current = { g, layout, s, look, send };
+  const [exporting, setExporting] = useState(false);
+  const tools = useRef<{ r: GradientRenderer; read: CanvasRenderingContext2D; grid: HTMLCanvasElement } | null>(null);
+  const phase = useRef(0);
+
+  const sampleAt = (p: number) => {
+    const { g, layout, look } = state.current;
+    const t = tools.current!;
+    t.r.setSize(layout.cols, layout.rows);
+    t.r.render(g, { phase: p, pxScale: 1, seed: 0 });
+    t.read.canvas.width = layout.cols;
+    t.read.canvas.height = layout.rows;
+    t.read.drawImage(t.r.canvas, 0, 0);
+    const rgba = t.read.getImageData(0, 0, layout.cols, layout.rows).data;
+    return sampleLeds(layout, rgba, look.brightness, look.gamma);
+  };
+
+  useEffect(() => {
+    try {
+      const read = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+      tools.current = { r: new GradientRenderer(document.createElement('canvas'), true), read, grid: document.createElement('canvas') };
+    } catch {
+      return;
+    }
+    let raf = 0, last = 0;
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      const { g, look } = state.current;
+      if (g.motion.mode !== 'none' && look.playing) phase.current = (phase.current + (last ? (t - last) / 1000 : 0) / Math.max(1, g.motion.duration)) % 1;
+      last = t;
+      const frame = sampleAt(phase.current);
+      state.current.send(frame.drive);
+      draw(canvas.current, tools.current!.grid, state.current, frame.screen);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const exportSketch = async (name: string) => {
+    if (!tools.current) return;
+    setExporting(true);
+    await new Promise((r) => setTimeout(r, 30));
+    const { g, layout } = state.current;
+    const count = layout.leds.length;
+    // Keep the whole loop under ~1.5 MB so it fits in an ESP32's flash.
+    const fps = 20;
+    const want = g.motion.mode === 'none' ? 1 : Math.round(g.motion.duration * fps);
+    const frames = Math.max(1, Math.min(want, Math.floor(1_500_000 / Math.max(1, count * 3))));
+    const out: Uint8Array[] = [];
+    for (let f = 0; f < frames; f++) out.push(sampleAt(f / frames).drive);
+    const realFps = g.motion.mode === 'none' ? 1 : Math.max(1, Math.round(frames / g.motion.duration));
+    download(`atmos-${slug(name)}-leds.ino`, fastLedSketch(out, count, realFps, name));
+    setExporting(false);
+  };
+
+  return { canvas, exporting, exportSketch };
+}
+
+/** Draw the wall, the frame, and the lit piece (bare LEDs, diffused, or both side by side). */
+function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout: LedLayout; s: LedSettings; look: Look }, rgb: Uint8Array) {
+  if (!c) return;
+  const { layout, s, look } = st;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = Math.round(c.clientWidth * dpr), H = Math.round(c.clientHeight * dpr);
+  if (!W || !H) return;
+  if (c.width !== W || c.height !== H) {
+    c.width = W;
+    c.height = H;
+  }
+  const ctx = c.getContext('2d')!;
+  const dark = look.room === 'dark';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = dark ? '#0e0d0c' : '#e9e6df';
+  ctx.fillRect(0, 0, W, H);
+
+  // mm → px, with room around the frame for the light it throws on the wall.
+  const border = Math.max(12, Math.min(s.frameW, s.frameH) * 0.05);
+  const k = Math.min((W * 0.72) / (s.frameW + 2 * border), (H * 0.72) / (s.frameH + 2 * border));
+  const ox = (W - s.frameW * k) / 2, oy = (H - s.frameH * k) / 2;
+
+  // One pixel per grid cell, padded, with empty cells taking their nearest LED's colour: the
+  // diffuser box's white walls bounce light into the gaps rather than leaving them black.
+  const P = FILL_PAD;
+  const near = nearestLed(layout);
+  const gcols = layout.cols + 2 * P, grows = layout.rows + 2 * P;
+  grid.width = gcols;
+  grid.height = grows;
+  const gctx = grid.getContext('2d')!;
+  const img = gctx.createImageData(gcols, grows);
+  for (let c = 0, p = 0; c < near.length; c++, p += 4) {
+    const i = near[c];
+    if (i < 0) continue;
+    img.data[p] = rgb[i * 3];
+    img.data[p + 1] = rgb[i * 3 + 1];
+    img.data[p + 2] = rgb[i * 3 + 2];
+    img.data[p + 3] = 255;
+  }
+  gctx.putImageData(img, 0, 0);
+
+  const pitch = s.pitch;
+  const gx = ox + (s.frameW - (layout.cols - 1) * pitch) / 2 * k - (pitch * k) / 2 - P * pitch * k;
+  const gy = oy + (s.frameH - (layout.rows - 1) * pitch) / 2 * k - (pitch * k) / 2 - P * pitch * k;
+  const gw = gcols * pitch * k, gh = grows * pitch * k;
+
+  const shapePath = (inset: number) => {
+    const p = new Path2D();
+    const x = ox + inset * k, y = oy + inset * k, w = (s.frameW - 2 * inset) * k, h = (s.frameH - 2 * inset) * k;
+    if (s.shape === 'rect') p.rect(x, y, w, h);
+    else {
+      const rx = s.shape === 'circle' ? Math.min(w, h) / 2 : w / 2, ry = s.shape === 'circle' ? Math.min(w, h) / 2 : h / 2;
+      p.ellipse(x + w / 2, y + h / 2, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
+    }
+    return p;
+  };
+
+  const diffusedAny = look.view !== 'leds';
+  // Light spilling onto the wall around the piece.
+  if (diffusedAny) {
+    ctx.save();
+    ctx.globalAlpha = dark ? 0.55 : 0.18;
+    ctx.filter = `blur(${Math.round(Math.min(W, H) * 0.08)}px)`;
+    ctx.imageSmoothingEnabled = true;
+    const spread = 1.35;
+    ctx.drawImage(grid, ox + (s.frameW * k * (1 - spread)) / 2, oy + (s.frameH * k * (1 - spread)) / 2, s.frameW * k * spread, s.frameH * k * spread);
+    ctx.restore();
+  }
+
+  // Frame, following the shape.
+  const outer = shapePath(-border);
+  ctx.fillStyle = dark ? '#050505' : '#1a1a1a';
+  ctx.fill(outer);
+  const inner = shapePath(0);
+  ctx.fillStyle = '#030303';
+  ctx.fill(inner);
+
+  const drawDiffused = () => {
+    ctx.save();
+    ctx.clip(inner);
+    ctx.imageSmoothingEnabled = true;
+    const blur = pitch * k * (0.6 + 1.6 * look.diffusion);
+    ctx.filter = `blur(${blur.toFixed(1)}px)`;
+    ctx.drawImage(grid, gx, gy, gw, gh);
+    ctx.filter = 'none';
+    // A faint sheen on the diffuser surface.
+    const sheen = ctx.createLinearGradient(ox, oy, ox + s.frameW * k, oy + s.frameH * k);
+    sheen.addColorStop(0, 'rgba(255,255,255,0.05)');
+    sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sheen;
+    ctx.fill(inner);
+    ctx.restore();
+  };
+
+  const drawBare = () => {
+    ctx.save();
+    ctx.clip(inner);
+    const r = Math.max(0.8, pitch * k * 0.2);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const l of layout.leds) {
+      const x = ox + l.x * k, y = oy + l.y * k;
+      const col = `rgb(${rgb[l.i * 3]},${rgb[l.i * 3 + 1]},${rgb[l.i * 3 + 2]})`;
+      if (r > 2.5) {
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+        glow.addColorStop(0, col);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = glow;
+        ctx.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  if (look.view === 'diffused') drawDiffused();
+  else if (look.view === 'leds') drawBare();
+  else {
+    const mid = ox + (s.frameW * k) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, mid, H);
+    ctx.clip();
+    drawBare();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(mid, 0, W - mid, H);
+    ctx.clip();
+    drawDiffused();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.setLineDash([4 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(mid, oy - border * k);
+    ctx.lineTo(mid, oy + (s.frameH + border) * k);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  if (look.wires && layout.leds.length) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = Math.max(1, dpr);
+    ctx.beginPath();
+    layout.leds.forEach((l, i) => (i ? ctx.lineTo(ox + l.x * k, oy + l.y * k) : ctx.moveTo(ox + l.x * k, oy + l.y * k)));
+    ctx.stroke();
+    const a = layout.leds[0], z = layout.leds[layout.leds.length - 1];
+    ctx.fillStyle = '#3df58a';
+    ctx.beginPath();
+    ctx.arc(ox + a.x * k, oy + a.y * k, 4 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff5a5a';
+    ctx.beginPath();
+    ctx.arc(ox + z.x * k, oy + z.y * k, 4 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = `${10 * dpr}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = dark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)';
+    ctx.fillText('DATA IN', ox + a.x * k - 20 * dpr, oy - border * k - 8 * dpr);
+    ctx.restore();
+  }
+}
+
+const FILL_PAD = 3;
+const nearCache = new WeakMap<LedLayout, Int32Array>();
+
+/** For every cell of the padded grid, the index of the closest LED (breadth-first flood from the LEDs). */
+function nearestLed(layout: LedLayout): Int32Array {
+  const hit = nearCache.get(layout);
+  if (hit) return hit;
+  const P = FILL_PAD, w = layout.cols + 2 * P, h = layout.rows + 2 * P;
+  const out = new Int32Array(w * h).fill(-1);
+  let queue: number[] = [];
+  for (const l of layout.leds) {
+    const c = (l.row + P) * w + l.col + P;
+    out[c] = l.i;
+    queue.push(c);
+  }
+  while (queue.length) {
+    const next: number[] = [];
+    for (const c of queue) {
+      const x = c % w, y = (c - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const n = ny * w + nx;
+        if (out[n] >= 0) continue;
+        out[n] = out[c];
+        next.push(n);
+      }
+    }
+    queue = next;
+  }
+  nearCache.set(layout, out);
+  return out;
+}
+
+// ---------------------------------------------------------------- Web Serial (Adalight)
+
+interface SerialPortLike {
+  open(o: { baudRate: number }): Promise<void>;
+  close(): Promise<void>;
+  writable: WritableStream<Uint8Array> | null;
+}
+
+function useSerial() {
+  const nav = navigator as Navigator & { serial?: { requestPort(): Promise<SerialPortLike> } };
+  const supported = !!nav.serial;
+  const port = useRef<SerialPortLike | null>(null);
+  const writer = useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null);
+  const busy = useRef(false);
+  const lastSent = useRef(0);
+  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const baud = 115200;
+
+  const connect = async () => {
+    try {
+      const p = await nav.serial!.requestPort();
+      await p.open({ baudRate: baud });
+      port.current = p;
+      writer.current = p.writable!.getWriter();
+      setConnected(true);
+      setStatus('Connected. Streaming this sky to your LEDs.');
+    } catch (e) {
+      if ((e as Error).name !== 'NotFoundError') setStatus(`Couldn't open the port: ${(e as Error).message}`);
+    }
+  };
+
+  const disconnect = async () => {
+    try {
+      writer.current?.releaseLock();
+      await port.current?.close();
+    } catch {
+      /* already gone */
+    }
+    writer.current = null;
+    port.current = null;
+    setConnected(false);
+    setStatus(null);
+  };
+
+  useEffect(() => () => void disconnect(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Send a frame if the line is free, no faster than the baud rate allows. */
+  const send = (rgb: Uint8Array) => {
+    const w = writer.current;
+    if (!w || busy.current || !rgb.length) return;
+    const packet = adalight(rgb);
+    const minGap = ((packet.length * 10) / baud) * 1000;
+    const now = performance.now();
+    if (now - lastSent.current < minGap) return;
+    lastSent.current = now;
+    busy.current = true;
+    w.write(packet)
+      .catch(() => {
+        setStatus('The LED board disconnected.');
+        void disconnect();
+      })
+      .finally(() => (busy.current = false));
+  };
+
+  return { supported, connected, status, connect, disconnect, send };
+}
+
+// ---------------------------------------------------------------- small controls
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="led-group">
+      <h3>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function Seg<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
+  return (
+    <div className="led-seg" role="radiogroup">
+      {options.map(([v, label]) => (
+        <button key={v} role="radio" aria-checked={value === v} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Num({ label, value, onChange, min, max, step = 0.5 }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) {
+  const [text, setText] = useState(fmt(value));
+  useEffect(() => setText(fmt(value)), [value]);
+  return (
+    <label className="led-num">
+      <span>{label}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        value={text}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => {
+          setText(e.target.value);
+          const v = parseFloat(e.target.value);
+          if (Number.isFinite(v) && v >= min && v <= max) onChange(v);
+        }}
+        onBlur={() => setText(fmt(value))}
+      />
+    </label>
+  );
+}
+const fmt = (v: number) => String(Math.round(v * 10) / 10);
+
+function Slider({ label, value, onChange, min, max, step, show }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; step: number; show: string }) {
+  return (
+    <label className="led-slider">
+      <span>
+        {label}
+        <em>{show}</em>
+      </span>
+      <input type="range" value={value} min={min} max={max} step={step} onChange={(e) => onChange(parseFloat(e.target.value))} />
+    </label>
+  );
+}
+
+function Stat({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <dt>{k}</dt>
+      <dd>{v}</dd>
+    </div>
+  );
+}

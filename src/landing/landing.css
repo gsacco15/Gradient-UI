@@ -200,3 +200,4 @@
   .l-viewer .l-hero-actions { gap: 8px; }
   .l-viewer .l-hero-actions .l-pill.big { padding: 12px 14px; font-size: 14px; }
 }
+.l-foot-link:hover { color: var(--l-ink); }
