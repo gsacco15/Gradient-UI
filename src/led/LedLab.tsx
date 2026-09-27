@@ -13,6 +13,7 @@ import './led.css';
 
 type View = 'diffused' | 'leds' | 'split';
 type Bezel = 'black' | 'white' | 'oak';
+type BezelWidth = 'none' | 'thin' | 'standard';
 
 const BEZELS: Record<Bezel, { face: string; edge: string }> = {
   black: { face: '#070707', edge: 'rgba(255,255,255,0.06)' },
@@ -28,12 +29,13 @@ interface Look {
   room: 'dark' | 'light';
   wires: boolean;
   bezel: Bezel;
+  bezelWidth: BezelWidth;
   playing: boolean;
 }
 
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel }, source: 'studio' };
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -149,7 +151,8 @@ export default function LedLab() {
               <Num label="Width (in)" value={mmToIn(s.frameW)} onChange={(v) => set({ frameW: inToMm(v) })} min={3} max={96} />
               <Num label="Height (in)" value={mmToIn(s.frameH)} onChange={(v) => set({ frameH: inToMm(v) })} min={3} max={96} />
             </div>
-            <Seg value={look.bezel} onChange={(bezel) => setLook({ ...look, bezel })} options={[['black', 'Black frame'], ['white', 'White'], ['oak', 'Oak']]} />
+            <Seg value={look.bezelWidth} onChange={(bezelWidth) => setLook({ ...look, bezelWidth })} options={[['standard', 'Full frame'], ['thin', 'Thin bezel'], ['none', 'No bezel']]} />
+            {look.bezelWidth !== 'none' && <Seg value={look.bezel} onChange={(bezel) => setLook({ ...look, bezel })} options={[['black', 'Black'], ['white', 'White'], ['oak', 'Oak']]} />}
             <Seg value={s.shape} onChange={(shape: LedShape) => set({ shape })} options={[['rect', s.frameW === s.frameH ? 'Square' : 'Rectangle'], ['circle', 'Circle'], ['oval', 'Oval']]} />
           </Group>
 
@@ -322,8 +325,9 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
   ctx.fillRect(0, 0, W, H);
 
   // mm → px, with room around the frame for the light it throws on the wall.
-  const border = Math.max(12, Math.min(s.frameW, s.frameH) * 0.05);
-  const k = Math.min((W * 0.72) / (s.frameW + 2 * border), (H * 0.72) / (s.frameH + 2 * border));
+  const standard = Math.max(12, Math.min(s.frameW, s.frameH) * 0.05);
+  const border = look.bezelWidth === 'none' ? 0 : look.bezelWidth === 'thin' ? Math.max(4, standard * 0.3) : standard;
+  const k = Math.min((W * 0.72) / (s.frameW + 2 * standard), (H * 0.72) / (s.frameH + 2 * standard));
   const ox = (W - s.frameW * k) / 2, oy = (H - s.frameH * k) / 2;
 
   // One pixel per grid cell, padded, with empty cells taking their nearest LED's colour: the
@@ -373,20 +377,22 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
     ctx.restore();
   }
 
-  // Frame, following the shape.
-  const outer = shapePath(-border);
+  // Frame, following the shape. With no bezel, the lightbox floats with just its shadow.
+  const inner = shapePath(0);
+  const outer = border ? shapePath(-border) : inner;
   const bezel = BEZELS[look.bezel] ?? BEZELS.black;
   ctx.save();
   ctx.shadowColor = dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)';
-  ctx.shadowBlur = border * k * 0.6;
-  ctx.shadowOffsetY = border * k * 0.15;
-  ctx.fillStyle = bezel.face;
+  ctx.shadowBlur = standard * k * 0.6;
+  ctx.shadowOffsetY = standard * k * 0.15;
+  ctx.fillStyle = border ? bezel.face : '#030303';
   ctx.fill(outer);
   ctx.restore();
-  ctx.strokeStyle = bezel.edge;
-  ctx.lineWidth = Math.max(1, dpr);
-  ctx.stroke(outer);
-  const inner = shapePath(0);
+  if (border) {
+    ctx.strokeStyle = bezel.edge;
+    ctx.lineWidth = Math.max(1, dpr);
+    ctx.stroke(outer);
+  }
   ctx.fillStyle = '#030303';
   ctx.fill(inner);
 
