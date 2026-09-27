@@ -88,9 +88,12 @@ export function LedPiece({ g, className }: { g: Gradient; className?: string }) 
     let raf = 0;
     const paint = () => {
       try {
-        const layout = layoutFor(lab.s);
+        // Always the showcase oval; the light itself (LEDs, direction, view, room, glow, diffuser, brightness) follows the Lab.
+        const piece: LedSettings = { ...lab.s, frameW: PIECE.frameW, frameH: PIECE.frameH, shape: PIECE.shape, margin: PIECE.margin };
+        const look: Look = { ...lab.look, bezelWidth: 'none' };
+        const layout = layoutFor(piece);
         const rgba = renderPixels(forLeds(g), layout.cols, layout.rows);
-        draw(el, document.createElement('canvas'), { layout, s: lab.s, look: lab.look }, sampleLeds(layout, rgba, lab.look.brightness, 1).screen);
+        draw(el, document.createElement('canvas'), { layout, s: piece, look }, sampleLeds(layout, rgba, look.brightness, 1).screen);
       } catch {
         /* no WebGL: the card's own background shows instead */
       }
@@ -237,6 +240,16 @@ export default function LedLab() {
           </Group>
 
           <Group title="Frame">
+            <button
+              className="led-reset"
+              onClick={() => {
+                setS({ ...DEFAULT_LED, ...PIECE });
+                setLook({ ...PIECE_LOOK, playing: true });
+              }}
+              title="Back to the starting piece: 18 × 24 in oval, 144 LEDs/m, split view, no bezel"
+            >
+              Reset to default
+            </button>
             <select
               value={frameId}
               onChange={(e) => {
