@@ -179,8 +179,8 @@ export default function LedLab() {
           </Group>
 
           <Group title="Diffuser">
-            <Slider label="Softness" value={look.diffusion} onChange={(diffusion) => setLook({ ...look, diffusion })} min={0} max={1} step={0.01} show={`${Math.round(s.pitch * (0.6 + 1.6 * look.diffusion))} mm deep`} />
-            <p className="led-hint">For a seamless glow, mount the diffuser about 1 to 2 times the LED spacing away from the LEDs.</p>
+            <Slider label="Distance from LEDs" value={look.diffusion} onChange={(diffusion) => setLook({ ...look, diffusion })} min={0} max={1} step={0.01} show={`${Math.round(diffuserMm(s.pitch, look.diffusion))} mm · ${diffuserLook(look.diffusion)}`} />
+            <p className="led-hint">How far the frosted sheet sits in front of the LEDs. Too close and you see each LED as a bright spot; about 1.5× the LED spacing and it melts into one smooth glow.</p>
           </Group>
 
           <Group title="Wiring">
@@ -194,6 +194,7 @@ export default function LedLab() {
           <Group title="Output">
             <Slider label="Brightness" value={look.brightness} onChange={(brightness) => setLook({ ...look, brightness })} min={0.05} max={1} step={0.01} show={`${Math.round(look.brightness * 100)}%`} />
             <Slider label="Gamma" value={look.gamma} onChange={(gamma) => setLook({ ...look, gamma })} min={1} max={3} step={0.1} show={look.gamma.toFixed(1)} />
+            <p className="led-hint">LEDs make dark shades look much brighter than a screen does, so skies look washed out. Gamma corrects that. 2.2 matches most screens; go higher if the dark parts still look pale on the wall. Only changes what's sent to the LEDs.</p>
           </Group>
 
           <Group title="Build sheet">
@@ -205,9 +206,10 @@ export default function LedLab() {
               <Stat k="Power, typical" v={`${(stats.typicalAmps * 5).toFixed(0)} W`} />
               <Stat k="Power supply" v={stats.psu} />
               <Stat k="Max refresh" v={`${stats.maxFps} fps`} />
+              <Stat k="Box depth" v={`${Math.round(diffuserMm(s.pitch, look.diffusion) + 10)} mm · ${mmToIn(diffuserMm(s.pitch, look.diffusion) + 10).toFixed(1)} in`} />
             </dl>
             <p className="led-hint">
-              Numbers assume 5 V WS2812B-style LEDs. Inject power every ~150 LEDs so the far end doesn't fade. {stats.count > 1000 ? 'Over 1,000 LEDs: split the data across several pins to keep it smooth.' : ''}
+              Numbers assume 5 V WS2812B-style LEDs. Inject power every ~150 LEDs so the far end doesn't fade. {stats.count > 800 ? 'Over ~800 LEDs is a lot for one WLED controller: use 30 LEDs/m or split across two controllers.' : ''}
             </p>
           </Group>
 
@@ -239,6 +241,13 @@ export default function LedLab() {
     </div>
   );
 }
+
+/** Diffuser distance in mm for the slider (0..1): from 0.3× to 2.2× the LED spacing. */
+const diffuserMm = (pitch: number, d: number) => pitch * (0.3 + 1.9 * d);
+const diffuserLook = (d: number) => {
+  const r = diffuserMm(1, d);
+  return r < 0.9 ? 'spotty' : r < 1.4 ? 'soft' : 'seamless';
+};
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -400,10 +409,25 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
     ctx.save();
     ctx.clip(inner);
     ctx.imageSmoothingEnabled = true;
-    const blur = pitch * k * (0.6 + 1.6 * look.diffusion);
-    ctx.filter = `blur(${blur.toFixed(1)}px)`;
+    // Further from the LEDs, the light spreads wider and each LED's hot spot fades out.
+    const ratio = diffuserMm(1, look.diffusion);
+    ctx.filter = `blur(${Math.max(0.5, pitch * k * ratio * 0.7).toFixed(1)}px)`;
     ctx.drawImage(grid, gx, gy, gw, gh);
     ctx.filter = 'none';
+    const hot = Math.min(1, Math.max(0, (1.4 - ratio) / 1.1));
+    if (hot > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      const rad = pitch * k * (0.3 + 0.35 * ratio);
+      for (const l of layout.leds) {
+        const x = ox + l.x * k, y = oy + l.y * k;
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, rad);
+        glow.addColorStop(0, `rgba(${rgb[l.i * 3]},${rgb[l.i * 3 + 1]},${rgb[l.i * 3 + 2]},${(0.85 * hot).toFixed(3)})`);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
     // A faint sheen on the diffuser surface.
     const sheen = ctx.createLinearGradient(ox, oy, ox + s.frameW * k, oy + s.frameH * k);
     sheen.addColorStop(0, 'rgba(255,255,255,0.05)');
