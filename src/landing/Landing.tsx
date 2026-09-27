@@ -11,7 +11,6 @@ import { accountsEnabled, displayName, getShared, listCommunity, myLikes, requir
 import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
-import horizonSample from './horizon-sample.webp';
 import './landing.css';
 
 // The Lab piece loads with the Lab's code, only when its section is near the screen.
@@ -35,6 +34,18 @@ const HERO = HERO_NAMES.map((n) => {
 });
 
 const TRY = ['Tokyo rain at 2am', 'Iceland glacier at first light', 'A Turrell skyspace at dusk', 'Lavender field in a heat haze'];
+
+/** The sky someone painted on the home page this visit; "Open studio" links carry it in. */
+let painted: Gradient | null = null;
+const studioHref = () => (painted ? `/studio#g=${encodeGradient(painted)}` : '/studio');
+const studioLink = () => ({
+  href: '/studio',
+  onClick: (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    navigate(studioHref());
+  },
+});
 
 export function openInStudio(g: Gradient) {
   navigate(`/studio#g=${encodeGradient(g)}`);
@@ -86,7 +97,7 @@ function LandingNav({ bare = false }: { bare?: boolean }) {
             </button>
           )
         )}
-        <a className="l-pill dark" {...linkTo('/studio')}>
+        <a className="l-pill dark" {...studioLink()}>
           Open studio
         </a>
       </div>
@@ -103,7 +114,6 @@ function Home() {
 
       <Hero sky={sky} />
       <HowItWorks />
-      <Features />
       <LabSection g={sky.sky.g} />
       <CommunityWall limit={8} />
 
@@ -111,7 +121,7 @@ function Home() {
         <h2>Your sky is waiting.</h2>
         <p>Free, in your browser, nothing to install.</p>
         <div className="l-final-actions">
-          <a className="l-pill dark big" {...linkTo('/studio')}>
+          <a className="l-pill dark big" {...studioLink()}>
             Open the studio →
           </a>
           {!session && accountsEnabled && (
@@ -251,6 +261,7 @@ function useHeroSky() {
     try {
       const r = await generateFromText(p, abort.current.signal);
       setSky({ g: heroize(r.gradient), note: r.note || null, source: r.source, prompt: p });
+      painted = r.gradient;
       const hero = document.querySelector('.l-hero');
       if (hero && hero.getBoundingClientRect().top < 0) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
@@ -298,46 +309,48 @@ function Hero({ sky: h }: { sky: Sky }) {
           drawn from the sky.
         </h1>
         <p className="l-lede">Describe any sky and Atmos paints it. Shape it by hand, then use it as a wallpaper, in your designs, as a poster or film, or as light on your wall.</p>
-        <form
-          className="l-ask"
-          onSubmit={(e) => {
-            e.preventDefault();
-            h.generate(text.trim() || 'Tokyo rain at 2am');
-          }}
-        >
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Describe a sky… Tokyo rain at 2am" maxLength={200} aria-label="Describe a sky" readOnly={h.busy} enterKeyHint="go" />
-          <button className="l-pill dark" disabled={h.busy}>
-            {h.busy ? 'Painting…' : 'Paint it →'}
-          </button>
-        </form>
-        <div className="l-ask-chips">
-          {TRY.map((t) => (
-            <button
-              key={t}
-              disabled={h.busy}
-              onClick={() => {
-                setText(t);
-                h.generate(t);
-              }}
-            >
-              {t}
+      </div>
+      <div className="l-hero-ask">
+          <form
+            className="l-ask"
+            onSubmit={(e) => {
+              e.preventDefault();
+              h.generate(text.trim() || 'Tokyo rain at 2am');
+            }}
+          >
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Describe any sky…" maxLength={200} aria-label="Describe a sky" readOnly={h.busy} enterKeyHint="go" />
+            <button className="l-pill dark" disabled={h.busy}>
+              {h.busy ? 'Painting…' : 'Paint it →'}
             </button>
-          ))}
-        </div>
-        {h.error && <p className="l-ask-error">{h.error}</p>}
-        <p className="l-ask-alt">
-          {h.sky.source === 'preset' ? (
-            <>
-              Or{' '}
-              <a {...linkTo('/studio')}>open the studio</a> and start from scratch.
-            </>
-          ) : (
-            <>
-              Like it?{' '}
-              <button onClick={() => openInStudio(g)}>Open this sky in the studio →</button>
-            </>
-          )}
-        </p>
+          </form>
+          <div className="l-ask-chips">
+            {TRY.map((t) => (
+              <button
+                key={t}
+                disabled={h.busy}
+                onClick={() => {
+                  setText(t);
+                  h.generate(t);
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          {h.error && <p className="l-ask-error">{h.error}</p>}
+          <p className="l-ask-alt">
+            {h.sky.source === 'preset' ? (
+              <>
+                Or{' '}
+                <a {...linkTo('/studio')}>open the studio</a> and start from scratch.
+              </>
+            ) : (
+              <>
+                Like it?{' '}
+                <button onClick={() => openInStudio(g)}>Open this sky in the studio →</button>
+              </>
+            )}
+          </p>
       </div>
       <div className="l-hero-foot">
         <span className="l-hero-caption">
@@ -550,41 +563,6 @@ function HowItWorks() {
           </li>
         ))}
       </ol>
-    </section>
-  );
-}
-
-const FEATURES: { title: string; body: string; g: string; tag: string; wide?: boolean; img?: string }[] = [
-  { tag: 'AI', title: 'Say it, see it', body: 'Type “moss after a storm” and Claude picks the colours, the place and the hour.', g: 'WET CANOPY', wide: true },
-  { tag: 'EDIT', title: 'Shape it by hand', body: 'Drag colour points, add fog, grain and dither, make it move or follow the cursor.', g: 'QUADRANT NEBULA' },
-  { tag: 'UI', title: 'See it on real screens', body: 'Paint buttons, cards and headers, check contrast, copy the code.', g: 'CORONA' },
-  { tag: 'PRINT', title: 'Posters at 300 DPI', body: 'Field-note typography, bone or ink paper, ready for the print shop.', g: 'RED MESA' },
-  { tag: 'FILM', title: 'Photos into horizons', body: 'Scan any photo line by line into a slow moving film. Save stills or MP4.', g: 'TIDE LINE', img: horizonSample },
-];
-
-function Features() {
-  return (
-    <section className="l-features" id="features">
-      <div className="l-section-head">
-        <h2>Everything a gradient can be.</h2>
-        <p>Eighty-seven skies to start from, and the tools to make your own.</p>
-      </div>
-      <div className="l-bento">
-        {FEATURES.map((f) => (
-          <article key={f.title} className={`l-tile ${f.wide ? 'wide' : ''}`}>
-            {f.img ? (
-              <img src={f.img} alt="A photo scanned into horizontal bands of sea, sand and sky" className="l-tile-art l-tile-img" loading="lazy" />
-            ) : (
-              <Thumb g={preset(f.g)} w={f.wide ? 640 : 320} h={320} className="l-tile-art" />
-            )}
-            <div className="l-tile-text">
-              <span className="l-tag">{f.tag}</span>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-            </div>
-          </article>
-        ))}
-      </div>
     </section>
   );
 }
