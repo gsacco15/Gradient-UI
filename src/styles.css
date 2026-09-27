@@ -342,7 +342,9 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; border-radius: 
 .welcome-actions .btn { min-width: 180px; }
 
 /* ---------------------------------------------------------------- describe (experimental AI) */
-.exp-tag { align-self: flex-start; font-size: 9.5px; padding: 3px 7px; border: 1px dashed var(--ink); }
+.exp-tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 9.5px; padding: 3px 8px; border: 1px solid var(--line); color: var(--muted); }
+/* One quiet dot of colour marks experimental features. */
+.exp-dot { width: 5px; height: 5px; border-radius: 50%; background: #7b5cff; flex: none; }
 .describe { display: flex; flex-direction: column; border: 1px solid var(--line); }
 .describe:focus-within { border-color: var(--ink); }
 .describe textarea { border: 0; resize: none; padding: 10px; font-size: 11px; line-height: 1.6; background: none; outline: none; letter-spacing: 0.02em; }

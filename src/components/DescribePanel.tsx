@@ -46,7 +46,7 @@ export function DescribePanel() {
 
   return (
     <div className="pad stack">
-      <div className="exp-tag">EXPERIMENTAL · AI</div>
+      <div className="exp-tag"><span className="exp-dot" />EXPERIMENTAL · AI</div>
       <p className="hint">Describe a place, a moment or a mood. Claude picks the colours, the place and the time.</p>
       <form
         className="describe"
