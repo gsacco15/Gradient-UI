@@ -1,5 +1,5 @@
 // Export panel: image, video, code and project.
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { cssCaveats, download, slug, toCSS, toJSON, toSVG, toTailwind } from '../lib/exportCode';
 import { toEmbed } from '../lib/embed';
 import { gradientKey } from '../lib/gradient';
@@ -17,6 +17,15 @@ const SIZES: { label: string; w: number; h: number }[] = [
   { label: '4K · 3840×2160', w: 3840, h: 2160 },
   { label: 'PRINT · 3600×4500', w: 3600, h: 4500 },
 ];
+
+/** Phone wallpapers at native resolution. The largest also looks sharp on every smaller iPhone. */
+export const WALLPAPERS: { label: string; file: string; w: number; h: number }[] = [
+  { label: 'IPHONE PRO MAX · 1320×2868', file: 'iphone-pro-max', w: 1320, h: 2868 },
+  { label: 'IPHONE PRO · 1206×2622', file: 'iphone-pro', w: 1206, h: 2622 },
+  { label: 'IPHONE · 1179×2556', file: 'iphone', w: 1179, h: 2556 },
+];
+const ALL_SIZES = [...SIZES, ...WALLPAPERS];
+const wallpaperFor = (w: number, h: number) => WALLPAPERS.find((s) => s.w === w && s.h === h);
 
 export function ExportDialog() {
   const view = useStore((s) => s.view);
@@ -51,15 +60,18 @@ export function ExportDialog() {
 }
 
 function SizePicker({ size, setSize }: { size: { w: number; h: number }; setSize: (s: { w: number; h: number }) => void }) {
-  const custom = !SIZES.some((s) => s.w === size.w && s.h === size.h);
+  const custom = !ALL_SIZES.some((s) => s.w === size.w && s.h === size.h);
+  const opt = (s: { label: string; w: number; h: number }) => (
+    <button key={s.label} className={`opt ${s.w === size.w && s.h === size.h ? 'on' : ''}`} onClick={() => setSize({ w: s.w, h: s.h })}>
+      {s.label}
+    </button>
+  );
   return (
     <div className="opt-group">
-      <div className="opt-label">SIZE (PX)</div>
-      {SIZES.map((s) => (
-        <button key={s.label} className={`opt ${s.w === size.w && s.h === size.h ? 'on' : ''}`} onClick={() => setSize(s)}>
-          {s.label}
-        </button>
-      ))}
+      <div className="opt-label">PHONE WALLPAPER</div>
+      {WALLPAPERS.map(opt)}
+      <div className="opt-label spaced">SIZE (PX)</div>
+      {SIZES.map(opt)}
       <div className={`opt custom ${custom ? 'on' : ''}`}>
         CUSTOM
         <input type="number" min={16} max={8192} value={size.w} onChange={(e) => setSize({ ...size, w: clampSize(e.target.value) })} aria-label="Width" />×
@@ -83,18 +95,47 @@ function renderPNG(w: number, h: number): Promise<Blob> {
   }, 'image/png'));
 }
 
+const onPhone = () => window.matchMedia?.('(max-width: 860px)').matches ?? false;
+
+/** Can this browser hand a file to the share sheet (iPhone: "Save Image" puts it in Photos)? */
+function canShareFiles(): boolean {
+  try {
+    return !!navigator.canShare?.({ files: [new File([new Blob()], 'x.png', { type: 'image/png' })] });
+  } catch {
+    return false;
+  }
+}
+
 function ImageTab() {
   const g = useStore((s) => s.gradient);
-  const [size, setSize] = useState({ w: 2160, h: 2160 });
+  const [size, setSize] = useState(() => (onPhone() ? { w: WALLPAPERS[0].w, h: WALLPAPERS[0].h } : { w: 2160, h: 2160 }));
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState<File | null>(null); // rendered, waiting for a tap to save to Photos
+  const wp = wallpaperFor(size.w, size.h);
+  const fileName = `atmos-${slug(g.name)}-${wp ? `${wp.file}-wallpaper` : `${size.w}x${size.h}`}.png`;
+  const shareFiles = useMemo(canShareFiles, []);
+
+  useEffect(() => setReady(null), [size.w, size.h, g]);
+
   const png = async () => {
     setBusy(true);
     try {
-      download(`atmos-${slug(g.name)}-${size.w}x${size.h}.png`, await renderPNG(size.w, size.h));
+      const blob = await renderPNG(size.w, size.h);
+      // Rendering takes a moment, and the share sheet needs a fresh tap, so phones get a second button.
+      if (shareFiles && onPhone()) setReady(new File([blob], fileName, { type: 'image/png' }));
+      else download(fileName, blob);
     } catch (e) {
       useStore.getState().notify(`EXPORT FAILED · ${(e as Error).message}`);
     } finally {
       setBusy(false);
+    }
+  };
+  const saveToPhotos = async () => {
+    if (!ready) return;
+    try {
+      await navigator.share({ files: [ready], title: g.name });
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') download(ready.name, ready);
     }
   };
   const svg = () => {
@@ -108,14 +149,38 @@ function ImageTab() {
         {size.w} × {size.h} PX
         <br />
         PNG · ALL WEATHER LAYERS BAKED IN
+        {wp && (
+          <>
+            <br />
+            <br />
+            SET IT: SETTINGS → WALLPAPER → ADD NEW → PHOTOS.
+            <br />
+            THE CLOCK SITS TOP-CENTRE, SO CALM SKIES THERE LOOK BEST.
+          </>
+        )}
       </div>
       <div className="sheet-actions">
-        <button className="btn" onClick={png} disabled={busy}>
-          {busy ? 'RENDERING…' : 'DOWNLOAD PNG'}
-        </button>
-        <button className="btn ghost" onClick={svg}>
-          DOWNLOAD SVG
-        </button>
+        {ready ? (
+          <>
+            <button className="btn" onClick={saveToPhotos}>
+              SAVE TO PHOTOS
+            </button>
+            <button className="btn ghost" onClick={() => download(ready.name, ready)}>
+              DOWNLOAD FILE INSTEAD
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="btn" onClick={png} disabled={busy}>
+              {busy ? 'RENDERING…' : wp ? 'CREATE WALLPAPER' : 'DOWNLOAD PNG'}
+            </button>
+            {!wp && (
+              <button className="btn ghost" onClick={svg}>
+                DOWNLOAD SVG
+              </button>
+            )}
+          </>
+        )}
       </div>
     </>
   );

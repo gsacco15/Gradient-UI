@@ -432,3 +432,5 @@ a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }
   .account-menu { left: 0; right: auto; min-width: 240px; max-width: calc(100vw - 32px); }
   .account-menu a, .account-menu button { padding: 13px 16px !important; }
 }
+
+.opt-label.spaced { margin-top: 8px; }
