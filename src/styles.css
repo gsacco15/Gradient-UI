@@ -427,3 +427,8 @@ a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .view-tabs .how-link { color: var(--faint); font-size: 9.5px; padding: 4px 0; margin-left: auto; }
 .view-tabs .how-link:hover { color: var(--ink); }
 .view-tabs .kbd-hint + .how-link { margin-left: 16px; }
+/* On phones the name sits near the left edge, so the menu opens rightwards and stays on screen. */
+@media (max-width: 860px) {
+  .account-menu { left: 0; right: auto; min-width: 240px; max-width: calc(100vw - 32px); }
+  .account-menu a, .account-menu button { padding: 13px 16px !important; }
+}
