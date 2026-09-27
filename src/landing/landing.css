@@ -333,3 +333,6 @@
 .l-how-obj { height: 150px; justify-content: flex-end; }
 .l-how-obj > span { margin-bottom: auto; margin-top: auto; }
 .l-how-uses { align-items: center; }
+/* Use it: the Horizon photo-film as a soft backdrop and as the print. */
+.l-how-uses { background: linear-gradient(rgba(14, 12, 20, 0.62), rgba(14, 12, 20, 0.72)), var(--how-bg, none) center / cover, #121017; }
+.l-how-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }

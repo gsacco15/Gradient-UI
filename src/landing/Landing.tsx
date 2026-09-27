@@ -11,6 +11,7 @@ import { accountsEnabled, displayName, getShared, listCommunity, myLikes, requir
 import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
+import horizonSample from './horizon-sample.webp';
 import './landing.css';
 
 // The Lab piece loads with the Lab's code, only when its section is near the screen.
@@ -508,7 +509,7 @@ function SharedIntro({ shared, g }: { shared: SharedGradient; g: Gradient }) {
 
 /** How it works: three quiet steps, each with a small live picture. */
 function HowItWorks() {
-  const sky = preset('SKYSPACE'), dawn = preset('ALPENGLOW');
+  const sky = preset('SKYSPACE');
   const steps: { n: string; title: string; body: string; g: string; art: React.ReactNode }[] = [
     {
       n: '01',
@@ -563,7 +564,7 @@ function HowItWorks() {
       body: 'A phone wallpaper, code for your site, a print, a film, or a light piece for your wall.',
       g: 'MOON RING',
       art: (
-        <span className="l-how-uses" aria-hidden>
+        <span className="l-how-uses" aria-hidden style={{ '--how-bg': `url(${horizonSample})` } as React.CSSProperties}>
           <span className="l-how-obj">
             <span className="l-how-phone">
               <Thumb g={sky} w={90} h={180} />
@@ -572,10 +573,10 @@ function HowItWorks() {
           </span>
           <span className="l-how-obj">
             <span className="l-how-poster">
-              <Thumb g={dawn} w={110} h={140} />
+              <img src={horizonSample} alt="" loading="lazy" />
               <u />
             </span>
-            <em>Poster</em>
+            <em>Poster · Film</em>
           </span>
           <span className="l-how-obj">
             <span className="l-how-oval">
