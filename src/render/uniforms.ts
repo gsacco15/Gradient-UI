@@ -53,6 +53,7 @@ export function gradientUniforms(g: Gradient, o: UniformOptions = {}): Uniforms 
     u_soft: ['1f', [c.softness]],
     u_apSize: ['1f', [c.size ?? 0.62]],
     u_glow: ['1f', [c.glow ?? 0.45]],
+    u_ratio: ['1f', [c.ratio ?? 1]],
     u_rot: ['1f', [o.scan ? 0 : (c.rotation * Math.PI) / 180]],
     u_fog: ['1f', [w.fog]],
     u_haze: ['1f', [w.haze]],

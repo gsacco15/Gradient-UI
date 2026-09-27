@@ -3,7 +3,7 @@ import { nameForColor } from '../data/names';
 import { normalizeHex } from '../lib/color';
 import { MAX_POINTS, uid } from '../lib/gradient';
 import { selectedPoint, useStore } from '../store';
-import type { FrameShape, GradientType, InteractMode, MotionMode, Symmetry, Weather } from '../types';
+import type { FrameShape, Gradient, GradientType, InteractMode, MotionMode, Symmetry, Weather } from '../types';
 import { Field, Section, Seg, Slider } from './ui';
 
 const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame', 'aperture', 'bands', 'halo'];
@@ -176,6 +176,7 @@ export function Inspector() {
               <Seg options={SHAPES} value={g.composition.shape} onChange={(v) => update((d) => void (d.composition.shape = v))} />
             </Field>
             <Slider label="SIZE" value={g.composition.size} min={0.1} max={1.2} onChange={(v) => update((d) => void (d.composition.size = v), false)} format={(v) => `${Math.round(v * 100)}`} />
+            <ProportionSlider g={g} update={update} />
             <Slider label="EDGE" hint="How soft the aperture's edge is" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
             <Slider label="WALL GLOW" hint="Light spilling onto the wall around it" value={g.composition.glow} onChange={(v) => update((d) => void (d.composition.glow = v), false)} />
           </>
@@ -189,6 +190,7 @@ export function Inspector() {
         {g.type === 'halo' && (
           <>
             <Slider label="SIZE" value={g.composition.size} min={0.1} max={1.2} onChange={(v) => update((d) => void (d.composition.size = v), false)} format={(v) => `${Math.round(v * 100)}`} />
+            <ProportionSlider g={g} update={update} />
             <Slider label="RING" hint="Ring thickness" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
             <Slider label="CORONA" hint="Glow outside the ring" value={g.composition.glow} onChange={(v) => update((d) => void (d.composition.glow = v), false)} />
           </>
@@ -252,6 +254,31 @@ function HexInput({ value, onCommit }: { value: string; onCommit: (hex: string) 
       }}
       onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
       aria-label="Hex colour"
+    />
+  );
+}
+
+/**
+ * Width ÷ height of an aperture or halo, on a log scale so wide and tall feel even.
+ * 1:1 is a true circle or square on any canvas, poster or LED frame.
+ */
+function ProportionSlider({ g, update }: { g: Gradient; update: (fn: (d: Gradient) => void, history?: boolean) => void }) {
+  const ratio = g.composition.ratio ?? 1;
+  const fmt = (v: number) => {
+    const r = 2 ** v;
+    if (Math.abs(v) < 0.02) return '1:1';
+    return r > 1 ? `${r.toFixed(2)}:1` : `1:${(1 / r).toFixed(2)}`;
+  };
+  return (
+    <Slider
+      label="PROPORTION"
+      hint="1:1 is a true circle or square everywhere. Slide right for wider, left for taller."
+      value={Math.log2(ratio)}
+      min={-1.5}
+      max={1.5}
+      step={0.01}
+      format={fmt}
+      onChange={(v) => update((d) => void (d.composition.ratio = Math.abs(v) < 0.06 ? 1 : 2 ** v), false)}
     />
   );
 }

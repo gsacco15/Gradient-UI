@@ -23,6 +23,7 @@ export interface Composition {
   rotation: number; // degrees
   size: number; // aperture / halo size, 0..1
   glow: number; // light spilling past the aperture edge / halo corona, 0..1
+  ratio: number; // aperture / halo width ÷ height; 1 = true circle or square on any canvas
 }
 
 /** Weather layers — our names for blur, grain, dither and friends. All 0..1. */

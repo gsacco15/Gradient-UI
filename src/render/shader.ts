@@ -32,6 +32,7 @@ uniform float u_soft;
 uniform float u_rot;         // radians
 uniform float u_apSize;      // aperture / halo size
 uniform float u_glow;        // spill past the aperture / halo corona
+uniform float u_ratio;       // aperture / halo width ÷ height, independent of the canvas
 
 uniform float u_fog;
 uniform float u_haze;
@@ -127,6 +128,22 @@ float frameDist(vec2 uv) {
   return max(abs(q.x) / 0.42, q.y / 0.4);
 }
 
+// Aperture / halo space: true proportions on any canvas. The shorter canvas side spans 1,
+// then u_ratio stretches it (1 = circle / square, >1 wider, <1 taller).
+vec2 shapeSpace(vec2 uv) {
+  vec2 p = (uv - u_center) * vec2(aspect(), 1.0) / min(aspect(), 1.0);
+  float k = max(u_ratio, 0.05);
+  return p / vec2(sqrt(k), 1.0 / sqrt(k));
+}
+
+float apertureDist(vec2 p) {
+  if (u_shape == 0) return max(abs(p.x), abs(p.y)) / 0.5;
+  if (u_shape == 1) return length(p) / 0.5;
+  vec2 q = p - vec2(0.0, 0.1);
+  if (q.y < 0.0) return length(q * vec2(1.0, 0.9)) / 0.42;
+  return max(abs(q.x) / 0.42, q.y / 0.4);
+}
+
 // Evaluate the gradient at uv (0..1, y down). Returns Oklab.
 vec3 evalLab(vec2 uv) {
   float T = u_phase * TAU;
@@ -204,7 +221,7 @@ vec3 evalLab(vec2 uv) {
     t = fract((atan(d.x, -d.y) - u_angle) / TAU);
   } else if (u_type == 6) {
     // Aperture: one window of light in a wall, Turrell style. Ramp runs wall (0) -> edge (0.5) -> inner field (1).
-    float r = frameDist(uv) / max(u_apSize, 0.05);
+    float r = apertureDist(shapeSpace(uv)) / max(u_apSize, 0.05);
     float soft = max(u_soft, 0.02);
     float tIn = mix(0.5, 1.0, smoothstep(0.0, 0.75, 1.0 - r));
     float tOut = 0.5 * u_glow * exp(-max(r - 1.0, 0.0) * 3.0 / soft);
@@ -221,8 +238,7 @@ vec3 evalLab(vec2 uv) {
     t = n > 1.0 ? (floor(b) + smoothstep(1.0 - w, 1.0, fract(b))) / (n - 1.0) : clamp(s, 0.0, 1.0);
   } else if (u_type == 8) {
     // Halo: a ring of light with a corona, like an eclipse. Ramp runs sky (0) -> ring (1).
-    vec2 d = (uv - u_center) * vec2(aspect(), 1.0);
-    float dist = length(d);
+    float dist = length(shapeSpace(uv));
     float R = 0.45 * max(u_apSize, 0.05);
     float w = 0.012 + u_soft * 0.12;
     float ring = exp(-pow((dist - R) / w, 2.0));
