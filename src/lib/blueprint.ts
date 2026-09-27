@@ -72,7 +72,7 @@ export function blueprintSvg(b: BuildInfo): string {
     const r = Math.max(1.1, Math.min(4, s.pitch * k * 0.26));
     out.push(`<g class="led">${layout.leds.map((l) => `<circle cx="${f(X(l.x))}" cy="${f(Y(l.y))}" r="${f(r)}"/>`).join('')}</g>`);
     const a = layout.leds[0], z = layout.leds[layout.leds.length - 1];
-    out.push(`<circle cx="${f(X(a.x))}" cy="${f(Y(a.y))}" r="${f(r + 5)}" class="mark"/><text x="${f(X(a.x) - 12)}" y="${f(Y(a.y) - 12)}" text-anchor="end" class="d">DATA IN · LED 1</text>`);
+    out.push(`<circle cx="${f(X(a.x))}" cy="${f(Y(a.y))}" r="${f(r + 5)}" class="mark"/><text x="${f(X(a.x) - 12)}" y="${f(Y(a.y) - 12)}" text-anchor="end" class="d" style="fill:#2445e0;font-weight:700">DATA IN · LED 1</text>`);
     out.push(`<circle cx="${f(X(z.x))}" cy="${f(Y(z.y))}" r="${f(r + 5)}" class="mark"/><text x="${f(X(z.x) + 12)}" y="${f(Y(z.y) + 22)}" class="d">END · LED ${layout.leds.length}</text>`);
   }
   // dimensions
@@ -172,37 +172,40 @@ export function blueprintSvg(b: BuildInfo): string {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wv} ${Hv}" width="${Wv}" height="${Hv}">
 <defs>
-  <pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#fff" stroke-opacity=".06"/></pattern>
-  <pattern id="g2" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#g1)"/><path d="M100 0H0V100" fill="none" stroke="#fff" stroke-opacity=".12"/></pattern>
+  <pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#2445e0" stroke-opacity=".05"/></pattern>
+  <pattern id="g2" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#g1)"/><path d="M100 0H0V100" fill="none" stroke="#2445e0" stroke-opacity=".09"/></pattern>
   <style>
-    text { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; fill: #fff; }
-    .h { font-size: 15px; letter-spacing: .14em; font-weight: 700; }
-    .s { font-size: 12px; fill-opacity: .6; letter-spacing: .04em; }
-    .d { font-size: 12px; fill-opacity: .82; letter-spacing: .05em; }
-    .dim-t { fill-opacity: .55; }
-    .b { font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@500;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; fill: #111; }
+    .h { font-size: 13px; letter-spacing: .14em; font-weight: 700; }
+    .title { font-family: 'Geist', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -.03em; }
+    .s { font-size: 12px; fill: #6d6b66; letter-spacing: .03em; }
+    .d { font-size: 12px; fill: #3a3935; letter-spacing: .04em; }
+    .dim-t { fill: #8a877f; }
+    .b { font-size: 12.5px; font-weight: 700; letter-spacing: .08em; }
     .v { font-size: 13.5px; }
-    .v.big { font-size: 17px; }
+    .v.big { font-family: 'Geist', 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 19px; letter-spacing: -.01em; }
     .logo { font-family: 'Geist', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -.03em; }
-    .logo-s { font-size: 16px; fill-opacity: .7; letter-spacing: .08em; }
-    .thick { fill: none; stroke: #fff; stroke-width: 2; }
-    .thin, .thin line, .dim line { stroke: #fff; stroke-opacity: .7; stroke-width: 1; fill: none; }
-    .dash { fill: none; stroke: #fff; stroke-opacity: .55; stroke-width: 1.2; stroke-dasharray: 6 5; }
-    .hair { stroke: #fff; stroke-opacity: .18; }
-    .wire { fill: none; stroke: #fff; stroke-opacity: .3; stroke-width: 1; }
-    .wire.strong { stroke-opacity: .7; stroke-dasharray: 5 4; }
-    .led circle { fill: #fff; fill-opacity: .9; }
-    .mark { fill: none; stroke: #fff; stroke-width: 1.5; }
-    .fill { fill: #fff; fill-opacity: .85; }
-    .fill.soft { fill-opacity: .35; }
-    .tag { fill: #163f8c; stroke: #fff; stroke-width: 1.2; }
-    .n { font-size: 11px; font-weight: 700; }
-    .ray { stroke: #fff; stroke-opacity: .35; stroke-dasharray: 3 3; }
+    .logo-s { font-size: 16px; fill: #8a877f; letter-spacing: .08em; }
+    .thick { fill: none; stroke: #111; stroke-width: 1.6; }
+    .thin, .thin line, .dim line { stroke: #111; stroke-opacity: .55; stroke-width: 1; fill: none; }
+    .dash { fill: none; stroke: #111; stroke-opacity: .45; stroke-width: 1.1; stroke-dasharray: 6 5; }
+    .hair { stroke: #111; stroke-opacity: .1; }
+    .wire { fill: none; stroke: #2445e0; stroke-opacity: .45; stroke-width: 1.2; }
+    .wire.strong { stroke-opacity: .8; stroke-dasharray: 5 4; }
+    .led circle { fill: #111; }
+    .mark { fill: none; stroke: #2445e0; stroke-width: 1.6; }
+    .fill { fill: #111; fill-opacity: .85; }
+    .fill.soft { fill: #2445e0; fill-opacity: .22; }
+    .tag { fill: #fff; stroke: #2445e0; stroke-width: 1.2; }
+    .n { font-size: 11px; font-weight: 700; fill: #2445e0; }
+    .ray { stroke: #2445e0; stroke-opacity: .5; stroke-dasharray: 3 3; }
+    .accent { fill: #2445e0; }
   </style>
 </defs>
-<rect width="${Wv}" height="${Hv}" fill="#163f8c"/><rect width="${Wv}" height="${Hv}" fill="url(#g2)"/>
+<rect width="${Wv}" height="${Hv}" fill="#fff"/><rect width="${Wv}" height="${Hv}" fill="url(#g2)"/>
 <rect x="30" y="30" width="${Wv - 60}" height="${Hv - 60}" class="thick"/>
-<text x="70" y="86" class="h" style="font-size:22px">LIGHT PIECE BLUEPRINT</text>
+<circle cx="76" cy="77" r="6" class="accent"/><text x="92" y="88" class="title">Light piece blueprint</text>
 <text x="${Wv - 70}" y="86" text-anchor="end" class="s">${esc(`${stats.count.toLocaleString()} LEDs · ${shapeName(s).toUpperCase()} · ${mountName[mount].toUpperCase()}`)}</text>
 ${out.join('\n')}
 </svg>`;
@@ -281,6 +284,7 @@ export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
   const { s, stats, layout } = b;
   const cover = `<section class="page cover">
 <header><div><b>Atmos</b> [ lab ] · placement template</div><span>${esc(P.label)} · ${cols * rows + 1} pages</span></header>
+<p class="kicker">PLACEMENT TEMPLATE · 1:1</p>
 <h1>${esc(b.name)}</h1>
 <p class="sub">${Math.round(s.frameW)} × ${Math.round(s.frameH)} mm ${esc(shapeName(s).toLowerCase())} · ${stats.count.toLocaleString()} LEDs · ${s.mount === 'edge' ? 'one loop' : `${layout.runs} rows`} · ${s.pitch.toFixed(1)} mm spacing</p>
 <div class="cal"><svg width="50mm" height="50mm" viewBox="0 0 50 50"><rect x="0.15" y="0.15" width="49.7" height="49.7" fill="none" stroke="#111" stroke-width="0.3"/><text x="25" y="27" text-anchor="middle" font-size="4">50 mm</text></svg><p><b>Check the scale first.</b> This square must measure exactly 50 mm (1.97″). If not, print again with scaling set to 100% / Actual size.</p></div>
@@ -292,6 +296,7 @@ export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
 <li>Join the end of each row to the start of the next (zigzag), then connect DATA IN to the controller.</li>
 </ol>
 <div class="map">${map}</div>
+<div class="tb"><div class="tb-logo"><b>Atmos</b>[ lab ]</div><div><i>LIGHT PIECE</i>${esc(`${b.name}${b.place ? ` · ${b.place}` : ''}`)}</div><div><i>FRAME</i>${inch(s.frameW)} × ${inch(s.frameH)}</div><div><i>DATE</i>${esc(b.date ?? new Date().toISOString().slice(0, 10))}</div><div><i>SCALE</i>1:1 · ${esc(P.label)}</div></div>
 </section>`;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(b.name)} · Atmos Lab template</title>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
@@ -301,25 +306,36 @@ export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
 body { margin: 0; background: #f4f4f2; font-family: Geist, system-ui, sans-serif; color: #111; }
 .bar { position: sticky; top: 0; display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e2dc; font-size: 14px; }
 .bar button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 0; background: #111; color: #fff; cursor: pointer; }
+.bar .mark { font-family: 'JetBrains Mono', monospace; color: #8a877f; font-size: 12px; }
+.bar .mark b { font-family: Geist, sans-serif; font-size: 17px; letter-spacing: -.03em; color: #111; margin-right: 6px; }
 .page { width: ${f(P.w - 2 * MARGIN)}mm; margin: 16px auto; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08); page-break-after: always; break-after: page; }
 .page:last-child { page-break-after: auto; break-after: auto; }
-header { height: ${HEAD}mm; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: .04em; color: #555; }
-header b { font-family: Geist, sans-serif; color: #111; font-size: 11pt; letter-spacing: -.02em; margin-right: 4px; }
-header span { color: #888; }
+header { height: ${HEAD}mm; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.3mm solid #111; font-family: 'JetBrains Mono', monospace; font-size: 7.5pt; letter-spacing: .04em; color: #8a877f; }
+header b { font-family: Geist, sans-serif; color: #111; font-size: 12pt; letter-spacing: -.03em; margin-right: 5px; }
+header div::before { content: ''; display: inline-block; width: 2mm; height: 2mm; border-radius: 50%; background: #2445e0; margin-right: 2mm; vertical-align: 0.2mm; }
+header span { color: #8a877f; }
 svg { display: block; }
 svg text { font-family: 'JetBrains Mono', monospace; }
 .cover { padding-bottom: 8mm; }
-.cover h1 { font-size: 30pt; letter-spacing: -.04em; margin: 10mm 0 2mm; }
+.cover h1 { font-size: 30pt; font-weight: 700; letter-spacing: -.04em; margin: 2mm 0 2mm; }
+.cover .kicker { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: .14em; color: #2445e0; margin-top: 10mm; }
 .sub { color: #666; margin: 0 0 8mm; }
 .cal { display: flex; gap: 6mm; align-items: center; padding: 5mm; background: #f4f4f2; border-radius: 3mm; }
 .cal p { margin: 0; font-size: 10pt; line-height: 1.45; }
 ol { font-size: 10.5pt; line-height: 1.6; padding-left: 5mm; margin: 8mm 0; }
+ol li::marker { font-family: 'JetBrains Mono', monospace; color: #2445e0; }
+.tb { display: grid; grid-template-columns: 1.3fr 2fr 1.2fr 1.2fr 1.3fr; border: 0.35mm solid #111; margin-top: 10mm; }
+.tb > div { padding: 3mm; border-left: 0.35mm solid #111; font-size: 10pt; display: flex; flex-direction: column; gap: 1.2mm; justify-content: center; }
+.tb > div:first-child { border-left: 0; }
+.tb i { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; letter-spacing: .1em; color: #8a877f; }
+.tb-logo { flex-direction: row !important; align-items: baseline; gap: 2mm !important; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 8pt; color: #8a877f; }
+.tb-logo b { font-family: Geist, sans-serif; font-size: 17pt; letter-spacing: -.03em; color: #111; }
 .map { display: inline-flex; flex-direction: column; gap: 1.5mm; }
 .map .row { display: flex; gap: 1.5mm; }
 .map span { width: 14mm; height: 18mm; display: grid; place-items: center; border: 0.3mm solid #2445e0; color: #2445e0; font-family: 'JetBrains Mono', monospace; font-size: 9pt; }
 @media print { body { background: #fff; } .bar { display: none; } .page { margin: 0; box-shadow: none; } }
 </style></head><body>
-<div class="bar"><span><b>Atmos</b> [ lab ] · ${cols * rows} template pages + cover</span><button onclick="print()">Print</button></div>
+<div class="bar"><span class="mark"><b>Atmos</b>[ lab ] · ${cols * rows} template pages + cover</span><button onclick="print()">Print</button></div>
 ${cover}
 ${pages.join('\n')}
 </body></html>`;
@@ -332,15 +348,19 @@ export function blueprintHtml(b: BuildInfo, svg: string, fileName: string): stri
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 @page { size: landscape; margin: 8mm; }
-body { margin: 0; background: #0f2c63; font-family: Geist, system-ui, sans-serif; }
-.bar { display: flex; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 16px; color: #fff; font-size: 14px; }
-.bar a, .bar button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 0; background: #fff; color: #111; cursor: pointer; text-decoration: none; }
+body { margin: 0; background: #f4f4f2; font-family: Geist, system-ui, sans-serif; color: #111; }
+.bar { position: sticky; top: 0; display: flex; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e2dc; font-size: 14px; }
+.bar .mark { font-family: 'JetBrains Mono', monospace; color: #8a877f; font-size: 12px; }
+.bar .mark b { font-family: Geist, sans-serif; font-size: 17px; letter-spacing: -.03em; color: #111; margin-right: 6px; }
+.bar a, .bar button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 0; cursor: pointer; text-decoration: none; }
+.bar a { background: #fff; color: #111; box-shadow: inset 0 0 0 1.5px #111; }
+.bar button { background: #111; color: #fff; }
 .bar div { display: flex; gap: 8px; }
-.sheet { padding: 0 16px 24px; }
-.sheet svg { width: 100%; height: auto; display: block; box-shadow: 0 20px 60px -20px rgba(0,0,0,.6); }
+.sheet { padding: 16px; }
+.sheet svg { width: 100%; height: auto; display: block; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
 @media print { body { background: #fff; } .bar { display: none; } .sheet { padding: 0; } .sheet svg { box-shadow: none; } }
 </style></head><body>
-<div class="bar"><span><b>Atmos</b> [ lab ] · blueprint</span><div><a href="${href}" download="${esc(fileName)}">Download SVG</a><button onclick="print()">Print</button></div></div>
+<div class="bar"><span class="mark"><b>Atmos</b>[ lab ] · blueprint</span><div><a href="${href}" download="${esc(fileName)}">Download SVG</a><button onclick="print()">Print</button></div></div>
 <div class="sheet">${svg}</div>
 </body></html>`;
 }
