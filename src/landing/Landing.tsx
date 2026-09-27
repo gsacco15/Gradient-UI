@@ -12,21 +12,23 @@ import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
 import horizonSample from './horizon-sample.webp';
-import labSample from './lab-sample.webp';
+import { LedPiece } from '../led/LedLab';
 import './landing.css';
 
 const preset = (name: string) => ALL_PRESETS.find((g) => g.name === name) ?? ALL_PRESETS[0];
 
-// Hero skies: dark enough for white type, each made to drift and follow the cursor.
-const HERO = ['SOLAR WIND', 'ORION DUST', 'AFTERGLOW', 'LAVA FLOW', 'KELP FOREST', 'NEBULA DUSK'].map((n) => {
+// Hero skies: the Light Works pieces, Turrell-style windows and rings of light that slowly breathe.
+// On wide screens the light sits to the right of the headline; on phones it sits low, under the type.
+const HERO_NAMES = ['SKYSPACE', 'GANZFELD', 'APERTURE VIOLET', 'TOTALITY', 'CHAPEL LIGHT', 'MOON RING'];
+const wideHero = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 861px)').matches;
+const HERO = HERO_NAMES.map((n) => {
   const g = cloneGradient(preset(n), false);
-  if (g.type !== 'mesh') {
-    g.type = 'mesh';
-    g.background = g.points[g.points.length - 1].color;
-  }
-  g.motion = { mode: 'drift', speed: 0.7, duration: 14 };
-  g.interact = { mode: 'follow', strength: 0.7 };
-  g.weather = { ...g.weather, fog: Math.max(g.weather.fog, 0.25), haze: Math.max(g.weather.haze, 0.3) };
+  const wide = wideHero();
+  g.center = wide ? { x: 0.7, y: 0.5 } : { x: 0.5, y: 0.66 };
+  g.composition = { ...g.composition, size: Math.min(g.composition.size, wide ? 0.72 : 0.6) };
+  g.motion = { mode: 'pulse', speed: 0.45, duration: 12 };
+  g.interact = { mode: 'follow', strength: 0.5 };
+  g.weather = { ...g.weather, haze: Math.max(g.weather.haze, 0.25) };
   return g;
 });
 
@@ -91,7 +93,7 @@ function Home() {
       <Hero sky={sky} />
       <TryStrip sky={sky} />
       <Features />
-      <LabSection />
+      <LabSection g={sky.sky.g} />
       <Community />
 
       <section className="l-final">
@@ -121,12 +123,15 @@ function Home() {
 }
 
 /** The LED Lab: your sky as a real light piece on the wall. */
-function LabSection() {
+function LabSection({ g: heroSky }: { g: Gradient }) {
+  // The hero pushes apertures and halos aside to make room for the headline; a light piece wants them centred.
+  const g = useMemo(() => (heroSky.type === 'aperture' || heroSky.type === 'halo' ? { ...heroSky, center: { x: 0.5, y: 0.5 } } : heroSky), [heroSky]);
   return (
     <section className="l-lab" id="lab">
       <div className="l-lab-card">
         <div className="l-lab-art">
-          <img src={labSample} alt="An oval LED light piece glowing pink and violet on a dark wall: bare LEDs on the left half, the diffused glow on the right" loading="lazy" />
+          <LedPiece g={g} className="l-lab-canvas" />
+          <span className="l-lab-sky">{g.name} · AS A LIGHT PIECE</span>
           <span className="l-lab-cap l-lab-cap-l">BARE LEDS</span>
           <span className="l-lab-cap l-lab-cap-r">DIFFUSED</span>
         </div>
@@ -155,8 +160,8 @@ function LabSection() {
             </li>
           </ul>
           <div className="l-lab-actions">
-            <a className="l-pill light big" {...linkTo('/led')}>
-              Open the Lab →
+            <a className="l-pill light big" {...linkTo(`/led#g=${encodeGradient(g)}`)}>
+              Open the Lab with this sky →
             </a>
             <span className="l-lab-note">Free · works with WS2812B strips and WLED</span>
           </div>

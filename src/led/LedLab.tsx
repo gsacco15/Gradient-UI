@@ -4,7 +4,8 @@ import { COLLECTIONS } from '../data/collections';
 import { cloneGradient } from '../lib/gradient';
 import { download } from '../lib/exportCode';
 import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, gridFor, wledStill, type Mount, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
-import { GradientRenderer } from '../render/renderer';
+import { GradientRenderer, renderPixels } from '../render/renderer';
+import { gradientFromHash } from '../lib/share';
 import { linkTo } from '../router';
 import { useStore } from '../store';
 import type { Gradient } from '../types';
@@ -44,6 +45,49 @@ const load = (): { s: LedSettings; look: Look; source: string } => {
   }
 };
 
+/** The piece shown on the home page: a dense oval, no bezel, bare LEDs beside the diffused glow. */
+const PIECE: LedSettings = { frameW: 18 * 25.4, frameH: 24 * 25.4, shape: 'oval', pitch: 1000 / 144, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
+const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, bezel: 'black', bezelWidth: 'none' };
+let pieceLayout: LedLayout | null = null;
+
+/** A still of any sky as an LED piece, drawn when it scrolls into view and whenever the sky or size changes. */
+export function LedPiece({ g, className }: { g: Gradient; className?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && setSeen(true), { rootMargin: '300px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!seen || !el) return;
+    let raf = 0;
+    const paint = () => {
+      try {
+        const layout = (pieceLayout ??= buildLayout(PIECE));
+        const rgba = renderPixels(forLeds(g), layout.cols, layout.rows);
+        draw(el, document.createElement('canvas'), { layout, s: PIECE, look: PIECE_LOOK }, sampleLeds(layout, rgba, 1, 1).screen);
+      } catch {
+        /* no WebGL: the card's own background shows instead */
+      }
+    };
+    paint();
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(paint);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [g, seen]);
+  return <canvas ref={ref} className={className} aria-hidden />;
+}
+
 /** LEDs can't show film grain or dither, and nobody hovers over a wall piece. */
 function forLeds(src: Gradient): Gradient {
   const g = cloneGradient(src, false);
@@ -54,11 +98,19 @@ function forLeds(src: Gradient): Gradient {
 
 export default function LedLab() {
   const initial = useMemo(load, []);
+  // A sky handed over from the home page ("Open the Lab"), carried in the link.
+  const [linked] = useState(() => gradientFromHash(location.hash));
+  useEffect(() => {
+    if (linked) history.replaceState(null, '', '/led');
+  }, [linked]);
   const [s, setS] = useState<LedSettings>(initial.s);
   const [look, setLook] = useState<Look>(initial.look);
-  const [source, setSource] = useState(initial.source);
+  const [source, setSource] = useState(linked ? 'linked' : initial.source);
   const studio = useStore((st) => st.gradient);
-  const src = useMemo(() => (source === 'studio' ? studio : COLLECTIONS.flatMap((c) => c.gradients).find((g) => g.name === source) ?? studio), [source, studio]);
+  const src = useMemo(
+    () => (source === 'linked' && linked ? linked : source === 'studio' ? studio : COLLECTIONS.flatMap((c) => c.gradients).find((g) => g.name === source) ?? studio),
+    [source, studio, linked],
+  );
   const g = useMemo(() => forLeds(src), [src]);
   const layout = useMemo(() => buildLayout(s), [s]);
   const stats = useMemo(() => ledStats(layout, s, look.brightness), [layout, s, look.brightness]);
@@ -133,6 +185,7 @@ export default function LedLab() {
         <aside className="led-panel">
           <Group title="Sky">
             <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Gradient">
+              {linked && <option value="linked">From the home page · {linked.name}</option>}
               <option value="studio">Your studio sky · {studio.name}</option>
               {COLLECTIONS.map((c) => (
                 <optgroup key={c.id} label={c.title}>

@@ -9,8 +9,8 @@ import { navigate, usePath } from './router';
 import { useEffect } from 'react';
 import './styles.css';
 
-// Old share links pointed at "/#g=…"; they belong to the studio now.
-if (!location.pathname.startsWith('/studio') && /[#&]g=/.test(location.hash)) {
+// Old share links pointed at "/#g=…"; they belong to the studio now. (The Lab takes #g= too.)
+if (!location.pathname.startsWith('/studio') && !location.pathname.startsWith('/led') && /[#&]g=/.test(location.hash)) {
   history.replaceState(null, '', `/studio${location.search}${location.hash}`);
 }
 
