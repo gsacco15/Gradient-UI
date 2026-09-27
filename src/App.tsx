@@ -173,8 +173,8 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
   return (
     <header className="topbar">
       <a className="brand" {...linkTo('/')} title="Back to the home page">
-        <strong>ATMOS [ STUDIO ]</strong>
-        <span className="muted">SKY &amp; NATURE GRADIENTS / V0.3</span>
+        <strong>Atmos</strong>
+        <span>[ studio ]</span>
       </a>
       <div className="actions">
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">
