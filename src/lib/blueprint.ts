@@ -268,7 +268,7 @@ export function templatePages(b: BuildInfo, paper: Paper = 'letter') {
 
 /** A self-contained, print-ready HTML document: a cover page, then the template tiled across pages at 1:1. */
 export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
-  const { P, tw, th, pad, cols, rows } = templatePages(b, paper);
+  const { P, tw, th, pad, cols, rows, W, H } = templatePages(b, paper);
   const content = templateContent(b);
   const colL = (c: number) => String.fromCharCode(65 + c);
   const pages: string[] = [];
@@ -280,10 +280,23 @@ export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
       pages.push(`<section class="page"><header><div><b>Atmos</b> [ lab ] · ${esc(b.name)} · placement template</div><span>Page ${colL(c)}${r + 1} of ${cols * rows} · ${esc(P.label)} · print at 100%</span></header>
 <svg width="${f(tw)}mm" height="${f(th)}mm" viewBox="${f(vx)} ${f(vy)} ${f(tw)} ${f(th)}">${glue}${content}${marks}<text x="${f(vx + tw - 3)}" y="${f(vy + th - 3)}" text-anchor="end" font-size="6" font-weight="700" fill="#2445e0" fill-opacity="0.5">${colL(c)}${r + 1}</text></svg></section>`);
     }
-  const map = Array.from({ length: rows }, (_, r) => `<div class="row">${Array.from({ length: cols }, (_, c) => `<span>${colL(c)}${r + 1}</span>`).join('')}</div>`).join('');
+  // Overview: the whole template on one page, with every printed page outlined and labelled.
+  const tiles = Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: cols }, (_, c) => {
+      const x = -pad + c * (tw - OVERLAP), y = -pad + r * (th - OVERLAP);
+      return `<rect x="${f(x)}" y="${f(y)}" width="${f(tw)}" height="${f(th)}" fill="none" stroke="#2445e0" stroke-width="${f(Math.max(W, H) / 400)}" stroke-dasharray="${f(Math.max(W, H) / 120)} ${f(Math.max(W, H) / 200)}"/><text x="${f(x + tw / 2)}" y="${f(y + th / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${f(Math.min(tw, th) / 5)}" font-weight="700" fill="#2445e0" fill-opacity="0.22">${colL(c)}${r + 1}</text>`;
+    }).join(''),
+  ).join('');
+  const allW = (cols - 1) * (tw - OVERLAP) + tw, allH = (rows - 1) * (th - OVERLAP) + th;
+  const overview = `<section class="page">
+<header><div><b>Atmos</b> [ lab ] · ${esc(b.name)} · overview</div><span>Not to scale · ${cols * rows} pages to print</span></header>
+<p class="kicker">OVERVIEW · WHERE EACH PAGE GOES</p>
+<div class="ov"><svg viewBox="${f(-pad - 2)} ${f(-pad - 2)} ${f(allW + 4)} ${f(allH + 4)}" preserveAspectRatio="xMidYMid meet">${content}${tiles}</svg></div>
+<p class="note">Blue dashed boxes are the printed pages. Neighbouring pages overlap by ${OVERLAP} mm (the tinted strip on each page): trim one, lay it over the other, line up the blue crosses and tape.</p>
+</section>`;
   const { s, stats, layout } = b;
   const cover = `<section class="page cover">
-<header><div><b>Atmos</b> [ lab ] · placement template</div><span>${esc(P.label)} · ${cols * rows + 1} pages</span></header>
+<header><div><b>Atmos</b> [ lab ] · placement template</div><span>${esc(P.label)} · ${cols * rows + 2} pages</span></header>
 <p class="kicker">PLACEMENT TEMPLATE · 1:1</p>
 <h1>${esc(b.name)}</h1>
 <p class="sub">${Math.round(s.frameW)} × ${Math.round(s.frameH)} mm ${esc(shapeName(s).toLowerCase())} · ${stats.count.toLocaleString()} LEDs · ${s.mount === 'edge' ? 'one loop' : `${layout.runs} rows`} · ${s.pitch.toFixed(1)} mm spacing</p>
@@ -291,11 +304,10 @@ export function templateHtml(b: BuildInfo, paper: Paper = 'letter'): string {
 <ol>
 <li>Print every page at <b>100%</b>, no “fit to page”.</li>
 <li>Trim and overlap the tinted strips, lining up the blue crosses. Tape from the back.</li>
-<li>Assemble in the grid below, then tape the template to the back panel.</li>
+<li>Assemble the pages as shown on the overview (next page), then tape the template to the back panel.</li>
 <li>Stick each strip along its blue band, LED on each cross, in the direction of the arrow. Start at <b>DATA IN</b>.</li>
 <li>Join the end of each row to the start of the next (zigzag), then connect DATA IN to the controller.</li>
 </ol>
-<div class="map">${map}</div>
 <div class="tb"><div class="tb-logo"><b>Atmos</b>[ lab ]</div><div><i>LIGHT PIECE</i>${esc(`${b.name}${b.place ? ` · ${b.place}` : ''}`)}</div><div><i>FRAME</i>${inch(s.frameW)} × ${inch(s.frameH)}</div><div><i>DATE</i>${esc(b.date ?? new Date().toISOString().slice(0, 10))}</div><div><i>SCALE</i>1:1 · ${esc(P.label)}</div></div>
 </section>`;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(b.name)} · Atmos Lab template</title>
@@ -318,7 +330,7 @@ svg { display: block; }
 svg text { font-family: 'JetBrains Mono', monospace; }
 .cover { padding-bottom: 8mm; }
 .cover h1 { font-size: 30pt; font-weight: 700; letter-spacing: -.04em; margin: 2mm 0 2mm; }
-.cover .kicker { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: .14em; color: #2445e0; margin-top: 10mm; }
+.kicker { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: .14em; color: #2445e0; margin-top: 10mm; }
 .sub { color: #666; margin: 0 0 8mm; }
 .cal { display: flex; gap: 6mm; align-items: center; padding: 5mm; background: #f4f4f2; border-radius: 3mm; }
 .cal p { margin: 0; font-size: 10pt; line-height: 1.45; }
@@ -330,13 +342,17 @@ ol li::marker { font-family: 'JetBrains Mono', monospace; color: #2445e0; }
 .tb i { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; letter-spacing: .1em; color: #8a877f; }
 .tb-logo { flex-direction: row !important; align-items: baseline; gap: 2mm !important; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 8pt; color: #8a877f; }
 .tb-logo b { font-family: Geist, sans-serif; font-size: 17pt; letter-spacing: -.03em; color: #111; }
+.ov { height: ${f(P.h - 2 * MARGIN - HEAD - 34)}mm; display: flex; align-items: center; justify-content: center; margin-top: 4mm; }
+.ov svg { width: 100%; height: 100%; }
+.note { font-size: 9.5pt; line-height: 1.45; color: #555; margin: 3mm 0 0; }
 .map { display: inline-flex; flex-direction: column; gap: 1.5mm; }
 .map .row { display: flex; gap: 1.5mm; }
 .map span { width: 14mm; height: 18mm; display: grid; place-items: center; border: 0.3mm solid #2445e0; color: #2445e0; font-family: 'JetBrains Mono', monospace; font-size: 9pt; }
 @media print { body { background: #fff; } .bar { display: none; } .page { margin: 0; box-shadow: none; } }
 </style></head><body>
-<div class="bar"><span class="mark"><b>Atmos</b>[ lab ] · ${cols * rows} template pages + cover</span><button onclick="print()">Print</button></div>
+<div class="bar"><span class="mark"><b>Atmos</b>[ lab ] · cover, overview + ${cols * rows} template pages</span><button onclick="print()">Print</button></div>
 ${cover}
+${overview}
 ${pages.join('\n')}
 </body></html>`;
 }

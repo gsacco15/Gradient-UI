@@ -30,7 +30,8 @@ describe('placement template', () => {
     const t = templatePages(b, 'letter');
     expect(t.cols * t.rows).toBe(4);
     const html = templateHtml(b, 'letter');
-    expect(html.match(/class="page"/g)!.length).toBe(4);
+    expect(html.match(/class="page"/g)!.length).toBe(5); // 4 tiles + overview
+    expect(html).toContain('OVERVIEW · WHERE EACH PAGE GOES');
     expect(html).toContain('50 mm');
     expect(html).toContain('size: letter portrait');
     expect(html).toMatch(/<svg width="[\d.]+mm" height="[\d.]+mm"/);
