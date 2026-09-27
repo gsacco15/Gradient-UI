@@ -112,13 +112,40 @@ function ShareButton() {
 
 function Account() {
   const session = useAuth((s) => s.session);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const shut = (e: Event) => !(e.target as Element).closest?.('.account') && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('pointerdown', shut);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('pointerdown', shut);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [open]);
   if (!accountsEnabled) return null;
-  return session ? (
-    <button onClick={() => confirmSignOut()} title={`Signed in as ${session.user.email}. Click to sign out.`}>
-      {displayName(session).toUpperCase().slice(0, 14)}
-    </button>
-  ) : (
-    <button onClick={() => useAuth.getState().open('signin')}>SIGN IN</button>
+  if (!session) return <button onClick={() => useAuth.getState().open('signin')}>SIGN IN</button>;
+  return (
+    <span className="account">
+      <button className={open ? 'on' : ''} onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu">
+        {displayName(session).toUpperCase().slice(0, 14)} ▾
+      </button>
+      {open && (
+        <div className="account-menu" role="menu">
+          <div className="account-who">
+            <strong>{displayName(session)}</strong>
+            <span>{session.user.email}</span>
+          </div>
+          <a role="menuitem" {...linkTo('/#community')} onClick={(e) => { e.preventDefault(); setOpen(false); navigate('/'); setTimeout(() => document.getElementById('community')?.scrollIntoView(), 50); }}>
+            COMMUNITY WALL
+          </a>
+          <button role="menuitem" onClick={() => { setOpen(false); confirmSignOut(); }}>
+            SIGN OUT
+          </button>
+        </div>
+      )}
+    </span>
   );
 }
 

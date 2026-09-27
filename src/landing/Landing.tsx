@@ -148,13 +148,16 @@ function useHeroSky() {
   const generate = async (prompt: string) => {
     const p = prompt.trim().slice(0, 200);
     if (!p || busy) return;
+    // Close the phone keyboard first, so the page isn't left in its keyboard-open layout.
+    (document.activeElement as HTMLElement | null)?.blur();
     setBusy(true);
     setError(null);
     abort.current = new AbortController();
     try {
       const r = await generateFromText(p, abort.current.signal);
       setSky({ g: heroize(r.gradient), note: r.note || null, source: r.source, prompt: p });
-      document.querySelector('.l-hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const hero = document.querySelector('.l-hero');
+      if (hero && hero.getBoundingClientRect().top < 0) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       if ((e as Error).name !== 'AbortError') setError((e as Error).message);
     } finally {
@@ -337,7 +340,7 @@ function TryStrip({ sky }: { sky: Sky }) {
           <span className="exp-dot" />
           Experimental
         </span>
-        <input id="landing-describe" value={text} onChange={(e) => setText(e.target.value)} placeholder="Tokyo rain at 2am, neon on wet asphalt" maxLength={200} aria-label="Describe a sky" disabled={sky.busy} />
+        <input id="landing-describe" value={text} onChange={(e) => setText(e.target.value)} placeholder="Tokyo rain at 2am, neon on wet asphalt" maxLength={200} aria-label="Describe a sky" readOnly={sky.busy} enterKeyHint="go" />
         <button className="l-pill dark" disabled={!text.trim() || sky.busy}>
           {sky.busy ? 'Painting…' : 'Generate'}
         </button>
