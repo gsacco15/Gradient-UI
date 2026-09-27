@@ -799,13 +799,12 @@ export function CommunityPage() {
 export function SiteFooter() {
   return (
     <footer className="l-foot">
-      <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
+      <span>ATMOS [ STUDIO ]</span>
       <span className="l-foot-links">
         <a {...linkTo('/community')}>COMMUNITY</a>
         <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
         <a {...linkTo('/privacy')}>PRIVACY</a>
       </span>
-      <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
     </footer>
   );
 }
