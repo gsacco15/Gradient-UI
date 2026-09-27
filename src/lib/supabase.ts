@@ -6,7 +6,8 @@ import type { Gradient } from '../types';
 import { hydrateGradient } from './gradient';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Supabase calls this the publishable key (newer projects) or the anon key (older ones).
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
 export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey) : null;
 export const accountsEnabled = !!supabase;
