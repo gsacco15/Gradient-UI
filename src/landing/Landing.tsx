@@ -132,8 +132,6 @@ function LabSection({ g: heroSky }: { g: Gradient }) {
         <div className="l-lab-art">
           <LedPiece g={g} className="l-lab-canvas" />
           <span className="l-lab-sky">{g.name} · AS A LIGHT PIECE</span>
-          <span className="l-lab-cap l-lab-cap-l">BARE LEDS</span>
-          <span className="l-lab-cap l-lab-cap-r">DIFFUSED</span>
         </div>
         <div className="l-lab-text">
           <span className="l-lab-tag">
@@ -160,7 +158,7 @@ function LabSection({ g: heroSky }: { g: Gradient }) {
             </li>
           </ul>
           <div className="l-lab-actions">
-            <a className="l-pill light big" {...linkTo(`/led?piece#g=${encodeGradient(g)}`)}>
+            <a className="l-pill light big" {...linkTo(`/led#g=${encodeGradient(g)}`)}>
               Open the Lab with this sky →
             </a>
             <span className="l-lab-note">Free · works with WS2812B strips and WLED</span>

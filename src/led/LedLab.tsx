@@ -35,9 +35,12 @@ interface Look {
   spill?: boolean; // light spilling onto the wall around the piece
 }
 
+/** The starting piece, for the Lab and the home page: a dense oval, no bezel, bare LEDs beside the diffused glow. */
+const PIECE: LedSettings = { frameW: 18 * 25.4, frameH: 24 * 25.4, shape: 'oval', pitch: 1000 / 144, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
+const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, spill: false, bezel: 'black', bezelWidth: 'none' };
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, spill: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth }, source: 'studio' };
+  const fallback = { s: { ...DEFAULT_LED, ...PIECE }, look: { ...PIECE_LOOK, playing: true }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -46,21 +49,38 @@ const load = (): { s: LedSettings; look: Look; source: string } => {
   }
 };
 
-/** The piece shown on the home page: a dense oval, no bezel, bare LEDs beside the diffused glow. */
-const PIECE: LedSettings = { frameW: 18 * 25.4, frameH: 24 * 25.4, shape: 'oval', pitch: 1000 / 144, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
-const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, spill: false, bezel: 'black', bezelWidth: 'none' };
-let pieceLayout: LedLayout | null = null;
+const layoutCache = new Map<string, LedLayout>();
+const layoutFor = (s: LedSettings) => {
+  const key = JSON.stringify(s);
+  let l = layoutCache.get(key);
+  if (!l) {
+    if (layoutCache.size > 8) layoutCache.clear();
+    layoutCache.set(key, (l = buildLayout(s)));
+  }
+  return l;
+};
 
-/** A still of any sky as an LED piece, drawn when it scrolls into view and whenever the sky or size changes. */
+/**
+ * Any sky as an LED piece, set up exactly like the Lab (frame, LEDs, view, room, wall glow), so the
+ * home page shows what the Lab will. Drawn when scrolled into view and when the sky, size or Lab settings change.
+ */
 export function LedPiece({ g, className }: { g: Gradient; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [seen, setSeen] = useState(false);
+  const [lab, setLab] = useState(load);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && setSeen(true), { rootMargin: '300px' });
     io.observe(el);
-    return () => io.disconnect();
+    const refresh = () => setLab(load());
+    window.addEventListener('storage', refresh);
+    window.addEventListener('pageshow', refresh);
+    return () => {
+      io.disconnect();
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('pageshow', refresh);
+    };
   }, []);
   useEffect(() => {
     const el = ref.current;
@@ -68,9 +88,9 @@ export function LedPiece({ g, className }: { g: Gradient; className?: string }) 
     let raf = 0;
     const paint = () => {
       try {
-        const layout = (pieceLayout ??= buildLayout(PIECE));
+        const layout = layoutFor(lab.s);
         const rgba = renderPixels(forLeds(g), layout.cols, layout.rows);
-        draw(el, document.createElement('canvas'), { layout, s: PIECE, look: PIECE_LOOK }, sampleLeds(layout, rgba, 1, 1).screen);
+        draw(el, document.createElement('canvas'), { layout, s: lab.s, look: lab.look }, sampleLeds(layout, rgba, lab.look.brightness, 1).screen);
       } catch {
         /* no WebGL: the card's own background shows instead */
       }
@@ -85,8 +105,21 @@ export function LedPiece({ g, className }: { g: Gradient; className?: string }) 
       ro.disconnect();
       cancelAnimationFrame(raf);
     };
-  }, [g, seen]);
-  return <canvas ref={ref} className={className} aria-hidden />;
+  }, [g, seen, lab]);
+  const light = lab.look.room === 'light';
+  return (
+    <>
+      <canvas ref={ref} className={className} aria-hidden />
+      {lab.look.view === 'split' ? (
+        <>
+          <span className={`l-lab-cap l-lab-cap-l ${light ? 'ink' : ''}`}>BARE LEDS</span>
+          <span className={`l-lab-cap l-lab-cap-r ${light ? 'ink' : ''}`}>DIFFUSED</span>
+        </>
+      ) : (
+        <span className={`l-lab-cap l-lab-cap-l ${light ? 'ink' : ''}`}>{lab.look.view === 'leds' ? 'BARE LEDS' : 'DIFFUSED'}</span>
+      )}
+    </>
+  );
 }
 
 /** LEDs can't show film grain or dither, and nobody hovers over a wall piece. */
@@ -101,13 +134,11 @@ export default function LedLab() {
   const initial = useMemo(load, []);
   // A sky handed over from the home page ("Open the Lab"), carried in the link.
   const [linked] = useState(() => gradientFromHash(location.hash));
-  // "?piece" = open exactly as the home page showed it: same frame, LEDs, view and brightness.
-  const [asPiece] = useState(() => !!linked && new URLSearchParams(location.search).has('piece'));
   useEffect(() => {
     if (linked) history.replaceState(null, '', '/led');
   }, [linked]);
-  const [s, setS] = useState<LedSettings>(asPiece ? PIECE : initial.s);
-  const [look, setLook] = useState<Look>(asPiece ? { ...PIECE_LOOK, playing: true } : initial.look);
+  const [s, setS] = useState<LedSettings>(initial.s);
+  const [look, setLook] = useState<Look>(initial.look);
   const [source, setSource] = useState(linked ? 'linked' : initial.source);
   const studio = useStore((st) => st.gradient);
   const src = useMemo(
@@ -525,24 +556,36 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
   };
 
   const diffusedAny = look.view !== 'leds';
-  // Light spilling onto the wall around the piece, in the piece's own shape.
-  if (diffusedAny && look.spill !== false) {
-    const fw = s.frameW * k, fh = s.frameH * k;
-    const t = scratch('spill'), tw = Math.max(4, Math.round(fw / 6)), th = Math.max(4, Math.round(fh / 6));
-    t.width = tw;
-    t.height = th;
-    const tc = t.getContext('2d')!;
-    tc.save();
-    tc.scale(tw / fw, th / fh);
-    tc.translate(-ox, -oy);
-    tc.clip(shapePath(0));
-    tc.imageSmoothingEnabled = true;
-    tc.drawImage(grid, gx, gy, gw, gh);
-    tc.restore();
+  // Light spilling onto the wall: soft pools around the rim, each the colour of the LEDs beside it.
+  // Plain radial gradients, so it looks the same in every browser (no canvas blur needed).
+  if (diffusedAny && look.spill !== false && layout.leds.length) {
+    const fw = s.frameW * k, fh = s.frameH * k, cx = ox + fw / 2, cy = oy + fh / 2;
+    const rx = s.shape === 'circle' ? Math.min(fw, fh) / 2 : fw / 2, ry = s.shape === 'circle' ? Math.min(fw, fh) / 2 : fh / 2;
+    const { pitch: gp, x0, y0 } = gridFor(s);
+    const near = nearestLed(layout), gcols2 = layout.cols + 2 * FILL_PAD;
+    const reach = Math.min(fw, fh) * 0.42;
+    const n = 36;
     ctx.save();
-    ctx.globalAlpha = dark ? 0.55 : 0.18;
-    const spread = 1.3;
-    blurDraw(ctx, t, ox + (fw * (1 - spread)) / 2, oy + (fh * (1 - spread)) / 2, fw * spread, fh * spread, Math.min(W, H) * 0.08);
+    ctx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2, dx = Math.cos(t), dy = Math.sin(t);
+      // Where this direction meets the edge of the lit shape.
+      const d = s.shape === 'rect' ? Math.min(rx / Math.max(Math.abs(dx), 1e-6), ry / Math.max(Math.abs(dy), 1e-6)) : 1;
+      const px = s.shape === 'rect' ? cx + dx * d : cx + rx * dx, py = s.shape === 'rect' ? cy + dy * d : cy + ry * dy;
+      // Colour of the LEDs just inside that point.
+      const mmx = (cx + (px - cx) * 0.85 - ox) / k, mmy = (cy + (py - cy) * 0.85 - oy) / k;
+      const col = Math.min(layout.cols - 1, Math.max(0, Math.round((mmx - x0) / gp)));
+      const row = Math.min(layout.rows - 1, Math.max(0, Math.round((mmy - y0) / gp)));
+      const li = near[(row + FILL_PAD) * gcols2 + col + FILL_PAD];
+      if (li < 0) continue;
+      const [r, gg, b] = [rgb[li * 3], rgb[li * 3 + 1], rgb[li * 3 + 2]];
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, reach);
+      glow.addColorStop(0, `rgba(${r},${gg},${b},${dark ? 0.16 : 0.07})`);
+      glow.addColorStop(0.5, `rgba(${r},${gg},${b},${dark ? 0.06 : 0.025})`);
+      glow.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+      ctx.fillStyle = glow;
+      ctx.fillRect(px - reach, py - reach, reach * 2, reach * 2);
+    }
     ctx.restore();
   }
 
