@@ -75,26 +75,7 @@
 
 /* ---------------------------------------------------------------- try strip */
 .l-try { max-width: 860px; margin: -38px auto 0; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 14px; align-items: center; }
-.l-try-box {
-  width: 100%; display: flex; align-items: center; gap: 12px; border-radius: 999px; padding: 8px 8px 8px 12px;
-  /* aurora ring: the gradient shows only through the 2px transparent border */
-  border: 2px solid transparent;
-  background: linear-gradient(var(--l-card), var(--l-card)) padding-box,
-              linear-gradient(110deg, #8a3ffc, #e13ca8, #ff8a3d, #3df5a7, #56f0ff, #8a3ffc) 0 0 / 300% 100% border-box;
-  animation: ai-flow 6s linear infinite;
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.35), 0 10px 40px -16px rgba(138, 63, 252, 0.45);
-}
-.l-try-box.is-busy { animation-duration: 1.5s; }
-.l-try-chip { font-size: 10px; padding: 6px 11px; }
-.l-ai-btn {
-  color: #fff;
-  background: linear-gradient(110deg, #8a3ffc, #e13ca8, #ff8a3d, #8a3ffc) 0 0 / 300% 100%;
-  animation: ai-flow 5s linear infinite;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-.l-ai-btn:hover:not(:disabled) { box-shadow: 0 10px 30px -10px rgba(225, 60, 168, 0.7); }
-.l-ai-btn:disabled { background: #cfcdc7; animation: none; text-shadow: none; }
-.l-tile .ai-chip { font-size: 10px; }
+.l-try-box { width: 100%; display: flex; align-items: center; gap: 12px; background: var(--l-card); border-radius: 999px; padding: 8px 8px 8px 24px; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.04); }
 .l-try-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l-sub); white-space: nowrap; }
 .l-try-box input { flex: 1; min-width: 0; border: 0; outline: none; font: inherit; font-size: 17px; background: none; color: var(--l-ink); padding: 10px 0; letter-spacing: -0.01em; }
 .l-try-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -180,6 +161,7 @@
   .l-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .l-tile.wide { grid-column: auto; }
   .l-try-label { display: none; }
+  .l-try-box { padding-left: 18px; }
   .l-try-box input { font-size: 16px; }
   .l-hero { border-radius: 24px; min-height: 640px; }
   .l-hero-notes span:last-child { display: none; }
@@ -195,7 +177,6 @@
   .l-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .l-try-box, .l-ai-btn { animation: none; }
   .l-hero-canvas, .l-reading { animation: none; }
   .l-pill, .l-tile, .l-card-art .thumb { transition: none; }
   .l-card.skeleton { animation: none; }
