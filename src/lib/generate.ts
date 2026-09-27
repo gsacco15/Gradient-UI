@@ -74,7 +74,7 @@ export function forecastShuffle(g: Gradient, r: Rand = Math.random): Gradient {
 
 /** A completely new gradient — type, composition and all. */
 export function randomGradient(base: Gradient, r: Rand = Math.random): Gradient {
-  const types: GradientType[] = ['linear', 'radial', 'mesh', 'mesh', 'frame', 'conic'];
+  const types: GradientType[] = ['linear', 'radial', 'mesh', 'mesh', 'frame', 'conic', 'aperture', 'bands', 'halo'];
   const next = cloneGradient(base, false);
   next.type = pick(r, types);
   next.angle = Math.round(rr(r, 0, 360));
@@ -85,7 +85,10 @@ export function randomGradient(base: Gradient, r: Rand = Math.random): Gradient 
     count: Math.round(rr(r, 2, 5)),
     shape: pick(r, ['square', 'circle', 'arch'] as const),
     softness: rr(r, 0.5, 1),
+    size: rr(r, 0.4, 0.8),
+    glow: rr(r, 0.2, 0.7),
   };
+  if (next.type === 'aperture' || next.type === 'halo') next.composition.symmetry = 'none';
   next.weather = { ...next.weather, fog: r() < 0.5 ? rr(r, 0.2, 0.5) : 0, haze: rr(r, 0.1, 0.45), clouds: r() < 0.25 ? rr(r, 0.2, 0.5) : 0 };
   const n = Math.round(rr(r, 3, 5));
   while (next.points.length < n) next.points.push({ ...next.points[next.points.length - 1], id: uid('pt'), locked: false });

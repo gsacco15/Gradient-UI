@@ -4,7 +4,7 @@ import { hexToOklab } from '../lib/color';
 import { MAX_POINTS, sortedStops } from '../lib/gradient';
 import type { Gradient } from '../types';
 
-const TYPE_ID = { linear: 0, radial: 1, conic: 2, mesh: 3, frame: 4 } as const;
+const TYPE_ID = { linear: 0, radial: 1, conic: 2, mesh: 3, frame: 4, aperture: 6, bands: 7, halo: 8 } as const;
 const SYM_ID = { none: 0, mirror: 1, quadrant: 2, kaleido: 3 } as const;
 const SHAPE_ID = { square: 0, circle: 1, arch: 2 } as const;
 const MODE_ID = { none: 0, drift: 1, rotate: 2, pulse: 3, flow: 4 } as const;
@@ -51,6 +51,8 @@ export function gradientUniforms(g: Gradient, o: UniformOptions = {}): Uniforms 
     u_shape: ['1i', [SHAPE_ID[c.shape]]],
     u_count: ['1f', [c.count]],
     u_soft: ['1f', [c.softness]],
+    u_apSize: ['1f', [c.size ?? 0.62]],
+    u_glow: ['1f', [c.glow ?? 0.45]],
     u_rot: ['1f', [o.scan ? 0 : (c.rotation * Math.PI) / 180]],
     u_fog: ['1f', [w.fog]],
     u_haze: ['1f', [w.haze]],

@@ -23,7 +23,7 @@ export function fromAi(a: AiGradient): Gradient {
     angle: a.angle,
     colors: a.colors,
     background: a.colors[a.colors.length - 1],
-    composition: { symmetry: a.symmetry, count: 3, softness: 0.85 },
+    composition: { symmetry: a.type === 'aperture' || a.type === 'halo' ? 'none' : a.symmetry, count: a.bands ?? 3, softness: a.type === 'aperture' ? 0.6 : a.type === 'halo' ? 0.35 : 0.85, size: a.size ?? 0.62, glow: a.glow ?? 0.45 },
     weather: { fog: a.fog, haze: a.haze, frost: a.frost, clouds: a.clouds, heat: a.heat, dusk: a.dusk },
     motion: { mode: a.motion, speed: 0.5, duration: 10 },
   });
@@ -81,6 +81,9 @@ const MOODS: { match: RegExp; hues: number[]; L: [number, number]; C: number; ty
   { match: /desert|dune|sand|canyon|mesa/, hues: [55, 40, 75], L: [0.45, 0.92], C: 0.1, type: 'linear', weather: { heat: 0.3 }, place: 'SAHARA' },
   { match: /fire|lava|volcano|ember|flame/, hues: [30, 15, 55], L: [0.12, 0.8], C: 0.2, type: 'radial', place: 'ETNA' },
   { match: /ice|snow|glacier|winter|frost|arctic/, hues: [230, 210, 250], L: [0.55, 0.98], C: 0.05, type: 'linear', weather: { haze: 0.25 }, place: 'SVALBARD' },
+  { match: /turrell|skyspace|aperture|light ?(art|work|installation|box)|window of light/, hues: [270, 300, 30], L: [0.12, 0.85], C: 0.1, type: 'aperture', weather: { fog: 0.3, haze: 0.2 }, place: 'RODEN CRATER' },
+  { match: /horizon|rothko|strata|layers|seascape|sea line/, hues: [210, 30, 250], L: [0.3, 0.85], C: 0.08, type: 'bands', weather: { haze: 0.3 }, place: 'ICELAND FJORD' },
+  { match: /eclipse|halo|corona|moon ring|ring of light/, hues: [260, 40, 280], L: [0.08, 0.95], C: 0.08, type: 'halo', weather: { haze: 0.3 }, place: 'ATACAMA' },
   { match: /aurora|northern lights/, hues: [160, 300, 270], L: [0.12, 0.8], C: 0.18, type: 'mesh', weather: { fog: 0.3, haze: 0.35 }, place: 'TROMSØ' },
   { match: /flower|bloom|blossom|cherry|petal|pastel|candy/, hues: [350, 320, 20], L: [0.75, 0.95], C: 0.08, type: 'mesh', weather: { fog: 0.3 }, place: 'PROVENCE' },
 ];

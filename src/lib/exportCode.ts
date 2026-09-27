@@ -25,11 +25,22 @@ export function expandStops(g: Gradient, sub = 3): { color: string; pos: number 
 
 const stopList = (g: Gradient, sub = 3) => expandStops(g, sub).map((s) => `${s.color} ${pct(s.pos)}`).join(', ');
 
+/** The ramp colour at t (0..1), for exports that need one colour at a given point. */
+function rampColor(g: Gradient, t: number): string {
+  const s = sortedStops(g);
+  if (t <= s[0].pos) return s[0].color;
+  for (let i = 1; i < s.length; i++) if (t <= s[i].pos) return mixHex(s[i - 1].color, s[i].color, (t - s[i - 1].pos) / Math.max(1e-6, s[i].pos - s[i - 1].pos));
+  return s[s.length - 1].color;
+}
+
 /** Effects CSS can't reproduce faithfully. */
 export function cssCaveats(g: Gradient): string[] {
   const out: string[] = [];
   if (g.type === 'frame') out.push('Frame composition is approximated with a radial gradient.');
   if (g.type === 'mesh') out.push('Mesh is approximated with layered radial gradients.');
+  if (g.type === 'aperture') out.push('Aperture is approximated with a radial gradient; the soft edge and wall glow need the PNG export.');
+  if (g.type === 'bands') out.push('Bands are approximated with a linear gradient; the painterly seams need the PNG export.');
+  if (g.type === 'halo') out.push('Halo is approximated with a radial gradient; the corona needs the PNG export.');
   if (g.composition.symmetry !== 'none') out.push(`${g.composition.symmetry} symmetry is not expressible in CSS.`);
   if (g.weather.fog > 0) out.push('Fog (blur) is baked into the renderer only.');
   if (g.weather.frost > 0) out.push('Frost dither needs the PNG export.');
@@ -52,6 +63,27 @@ export function cssBackground(g: Gradient): string {
       const rev = expandStops(g, 2).map((s) => `${s.color} ${pct((1 - s.pos) * 0.5)}`).reverse().join(', ');
       const shape = g.composition.shape === 'circle' ? 'circle closest-side' : 'closest-side';
       return `radial-gradient(${shape} ${at}, ${rev})`;
+    }
+    case 'aperture': {
+      // centre (ramp 1) -> edge (0.5) at the aperture size -> wall (0) just past it
+      const size = g.composition.size ?? 0.62;
+      const shape = g.composition.shape === 'circle' ? 'circle closest-side' : 'closest-side';
+      return `radial-gradient(${shape} ${at}, ${rampColor(g, 1)} 0%, ${rampColor(g, 0.75)} ${pct(size * 0.55)}, ${rampColor(g, 0.5)} ${pct(size * 0.95)}, ${rampColor(g, 0.5 * (g.composition.glow ?? 0.45))} ${pct(size * 1.05)}, ${rampColor(g, 0)} ${pct(Math.min(1, size * 1.35))})`;
+    }
+    case 'bands': {
+      const n = Math.max(1, Math.round(g.composition.count));
+      const seam = Math.max(0.02, g.composition.softness) * 0.3 / n;
+      const stops = Array.from({ length: n }, (_, i) => {
+        const c = rampColor(g, n > 1 ? i / (n - 1) : 0.5);
+        const a = i / n, b = (i + 1) / n;
+        return `${c} ${pct(i ? a + seam : a)}, ${c} ${pct(i < n - 1 ? b - seam : b)}`;
+      });
+      return `linear-gradient(${Math.round(g.angle)}deg, ${stops.join(', ')})`;
+    }
+    case 'halo': {
+      const r = 0.9 * (g.composition.size ?? 0.62), w = 0.03 + g.composition.softness * 0.2;
+      const sky = rampColor(g, 0), ring = rampColor(g, 1), corona = rampColor(g, 0.5 * (g.composition.glow ?? 0.45));
+      return `radial-gradient(circle closest-side ${at}, ${sky} ${pct(Math.max(0, r - w))}, ${ring} ${pct(r)}, ${corona} ${pct(Math.min(1, r + w))}, ${sky} ${pct(Math.min(1, r + w * 3))})`;
     }
     case 'mesh': {
       const layers = g.points.map(

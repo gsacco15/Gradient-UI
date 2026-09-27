@@ -1,4 +1,4 @@
-export type GradientType = 'linear' | 'radial' | 'conic' | 'mesh' | 'frame';
+export type GradientType = 'linear' | 'radial' | 'conic' | 'mesh' | 'frame' | 'aperture' | 'bands' | 'halo';
 export type Symmetry = 'none' | 'mirror' | 'quadrant' | 'kaleido';
 export type FrameShape = 'square' | 'circle' | 'arch';
 export type MotionMode = 'none' | 'drift' | 'rotate' | 'pulse' | 'flow';
@@ -21,6 +21,8 @@ export interface Composition {
   count: number; // frame bands
   softness: number; // 0..1
   rotation: number; // degrees
+  size: number; // aperture / halo size, 0..1
+  glow: number; // light spilling past the aperture edge / halo corona, 0..1
 }
 
 /** Weather layers — our names for blur, grain, dither and friends. All 0..1. */

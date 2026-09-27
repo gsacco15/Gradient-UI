@@ -12,6 +12,8 @@ export const DEFAULT_COMPOSITION: Composition = {
   count: 3,
   softness: 0.7,
   rotation: 0,
+  size: 0.62,
+  glow: 0.45,
 };
 
 export const DEFAULT_WEATHER: Weather = { fog: 0, haze: 0.18, frost: 0, heat: 0, clouds: 0, pixel: 0, dusk: 0 };

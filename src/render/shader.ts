@@ -14,7 +14,7 @@ out vec4 outColor;
 #define TAU 6.28318530718
 
 uniform vec2 u_res;
-uniform int u_type;          // 0 linear 1 radial 2 conic 3 mesh 4 frame 5 scan
+uniform int u_type;          // 0 linear 1 radial 2 conic 3 mesh 4 frame 5 scan 6 aperture 7 bands 8 halo
 uniform int u_n;
 uniform vec3 u_col[MAXP];    // Oklab, sorted by pos for ramp types
 uniform float u_pos[MAXP];
@@ -30,6 +30,8 @@ uniform int u_shape;         // 0 square 1 circle 2 arch
 uniform float u_count;
 uniform float u_soft;
 uniform float u_rot;         // radians
+uniform float u_apSize;      // aperture / halo size
+uniform float u_glow;        // spill past the aperture / halo corona
 
 uniform float u_fog;
 uniform float u_haze;
@@ -200,6 +202,32 @@ vec3 evalLab(vec2 uv) {
   } else if (u_type == 2) {
     vec2 d = (uv - u_center) * vec2(aspect(), 1.0);
     t = fract((atan(d.x, -d.y) - u_angle) / TAU);
+  } else if (u_type == 6) {
+    // Aperture: one window of light in a wall, Turrell style. Ramp runs wall (0) -> edge (0.5) -> inner field (1).
+    float r = frameDist(uv) / max(u_apSize, 0.05);
+    float soft = max(u_soft, 0.02);
+    float tIn = mix(0.5, 1.0, smoothstep(0.0, 0.75, 1.0 - r));
+    float tOut = 0.5 * u_glow * exp(-max(r - 1.0, 0.0) * 3.0 / soft);
+    t = mix(tIn, tOut, smoothstep(1.0 - soft * 0.3, 1.0 + soft * 0.06, r));
+  } else if (u_type == 7) {
+    // Bands: stacked fields of colour with soft, slightly painterly seams (horizons, Rothko).
+    vec2 dir = vec2(sin(u_angle), -cos(u_angle));
+    vec2 p = (uv - 0.5) * vec2(aspect(), 1.0);
+    float len = abs(aspect() * dir.x) + abs(dir.y);
+    float n = max(u_count, 1.0);
+    float s = dot(p, dir) / len + 0.5 + (fbm(uv * 3.0 + 1.7) - 0.5) * 0.18 * u_soft / n;
+    float b = clamp(s, 0.0, 0.9999) * n;
+    float w = max(u_soft, 0.02) * 0.6;
+    t = n > 1.0 ? (floor(b) + smoothstep(1.0 - w, 1.0, fract(b))) / (n - 1.0) : clamp(s, 0.0, 1.0);
+  } else if (u_type == 8) {
+    // Halo: a ring of light with a corona, like an eclipse. Ramp runs sky (0) -> ring (1).
+    vec2 d = (uv - u_center) * vec2(aspect(), 1.0);
+    float dist = length(d);
+    float R = 0.45 * max(u_apSize, 0.05);
+    float w = 0.012 + u_soft * 0.12;
+    float ring = exp(-pow((dist - R) / w, 2.0));
+    float corona = u_glow * 0.8 * exp(-max(dist - R, 0.0) / (0.03 + u_glow * 0.3)) * smoothstep(R - w, R, dist);
+    t = max(ring, corona);
   } else {
     float r = clamp(frameDist(uv), 0.0, 1.0);
     float n = max(u_count, 1.0);

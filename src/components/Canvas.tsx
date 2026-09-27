@@ -158,6 +158,14 @@ function rampPosAt(g: Gradient, x: number, y: number): number {
   if (g.type === 'radial') return clamp(Math.hypot(x - g.center.x, y - g.center.y) / 0.7071);
   if (g.type === 'conic') return (((Math.atan2(x - g.center.x, -(y - g.center.y)) - (g.angle * Math.PI) / 180) / (Math.PI * 2)) % 1 + 1) % 1;
   if (g.type === 'frame') return clamp(1 - Math.max(Math.abs(x - g.center.x), Math.abs(y - g.center.y)) / 0.5);
+  if (g.type === 'aperture') {
+    const r = Math.max(Math.abs(x - g.center.x), Math.abs(y - g.center.y)) / 0.5 / Math.max(0.05, g.composition.size ?? 0.62);
+    return r < 1 ? clamp(0.5 + 0.5 * (1 - r)) : 0;
+  }
+  if (g.type === 'bands') {
+    const a = (g.angle * Math.PI) / 180;
+    return clamp((x - 0.5) * Math.sin(a) - (y - 0.5) * Math.cos(a) + 0.5);
+  }
   return 0.5;
 }
 
@@ -288,7 +296,7 @@ function Handles({ wrapRef }: { wrapRef: React.RefObject<HTMLDivElement | null> 
     }, false);
   };
 
-  const showCenter = g.type === 'radial' || g.type === 'conic' || g.type === 'frame';
+  const showCenter = g.type === 'radial' || g.type === 'conic' || g.type === 'frame' || g.type === 'aperture' || g.type === 'halo';
   const showAngle = g.type === 'linear' || g.type === 'conic';
   const a = (g.angle * Math.PI) / 180;
   const cx = g.type === 'linear' ? 0.5 : g.center.x, cy = g.type === 'linear' ? 0.5 : g.center.y;

@@ -6,7 +6,13 @@ import { selectedPoint, useStore } from '../store';
 import type { FrameShape, GradientType, InteractMode, MotionMode, Symmetry, Weather } from '../types';
 import { Field, Section, Seg, Slider } from './ui';
 
-const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame'];
+const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame', 'aperture', 'bands', 'halo'];
+
+const TYPE_HINTS: Partial<Record<GradientType, string>> = {
+  aperture: 'One window of light in a wall, like a James Turrell piece. Colours run wall → edge → inner light.',
+  bands: 'Stacked fields of colour with soft seams, like a horizon or a Rothko. Colours run in band order.',
+  halo: 'A ring of light with a corona, like an eclipse. Colours run sky → ring.',
+};
 const SYMS: Symmetry[] = ['none', 'mirror', 'quadrant', 'kaleido'];
 const SHAPES: FrameShape[] = ['square', 'circle', 'arch'];
 const MODES: MotionMode[] = ['none', 'drift', 'rotate', 'pulse', 'flow'];
@@ -46,11 +52,23 @@ export function Inspector() {
       </div>
 
       <Section title="TYPE">
-        <Seg options={TYPES} value={g.type} onChange={(t) => update((d) => void (d.type = t))} />
-        {(g.type === 'linear' || g.type === 'conic') && (
+        <Seg
+          options={TYPES}
+          value={g.type}
+          onChange={(t) =>
+            update((d) => {
+              d.type = t;
+              // A single aperture or halo is the point; mirrored copies would hide it.
+              if (t === 'aperture' || t === 'halo') d.composition.symmetry = 'none';
+              if (t === 'bands' && d.composition.count < 2) d.composition.count = 3;
+            })
+          }
+        />
+        {TYPE_HINTS[g.type] && <p className="hint">{TYPE_HINTS[g.type]}</p>}
+        {(g.type === 'linear' || g.type === 'conic' || g.type === 'bands') && (
           <Slider label="ANGLE" value={g.angle} min={0} max={360} step={1} format={(v) => `${Math.round(v)}°`} onChange={(v) => update((d) => void (d.angle = v), false)} />
         )}
-        {(g.type === 'radial' || g.type === 'conic' || g.type === 'frame') && (
+        {(g.type === 'radial' || g.type === 'conic' || g.type === 'frame' || g.type === 'aperture' || g.type === 'halo') && (
           <>
             <Slider label="CENTRE X" value={g.center.x} min={-0.2} max={1.2} onChange={(v) => update((d) => void (d.center.x = v), false)} format={(v) => `${Math.round(v * 100)}`} />
             <Slider label="CENTRE Y" value={g.center.y} min={-0.2} max={1.2} onChange={(v) => update((d) => void (d.center.y = v), false)} format={(v) => `${Math.round(v * 100)}`} />
@@ -132,6 +150,14 @@ export function Inspector() {
         <Field label="SYMMETRY">
           <Seg options={SYMS} value={g.composition.symmetry} onChange={(v) => update((d) => void (d.composition.symmetry = v))} />
         </Field>
+        {g.composition.symmetry !== 'none' && (g.type === 'frame' || g.type === 'aperture' || g.type === 'halo') && (
+          <p className="hint">
+            Symmetry is repeating this into copies.{' '}
+            <button className="link" onClick={() => update((d) => void (d.composition.symmetry = 'none'))}>
+              Show a single one
+            </button>
+          </p>
+        )}
         {g.composition.symmetry === 'kaleido' && (
           <Slider label="SLICES" value={g.composition.slices} min={2} max={16} step={1} onChange={(v) => update((d) => void (d.composition.slices = v), false)} />
         )}
@@ -142,6 +168,29 @@ export function Inspector() {
             </Field>
             <Slider label="BANDS" value={g.composition.count} min={1} max={10} step={1} onChange={(v) => update((d) => void (d.composition.count = v), false)} />
             <Slider label="SOFTNESS" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
+          </>
+        )}
+        {g.type === 'aperture' && (
+          <>
+            <Field label="SHAPE">
+              <Seg options={SHAPES} value={g.composition.shape} onChange={(v) => update((d) => void (d.composition.shape = v))} />
+            </Field>
+            <Slider label="SIZE" value={g.composition.size} min={0.1} max={1.2} onChange={(v) => update((d) => void (d.composition.size = v), false)} format={(v) => `${Math.round(v * 100)}`} />
+            <Slider label="EDGE" hint="How soft the aperture's edge is" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
+            <Slider label="WALL GLOW" hint="Light spilling onto the wall around it" value={g.composition.glow} onChange={(v) => update((d) => void (d.composition.glow = v), false)} />
+          </>
+        )}
+        {g.type === 'bands' && (
+          <>
+            <Slider label="BANDS" value={g.composition.count} min={2} max={8} step={1} onChange={(v) => update((d) => void (d.composition.count = v), false)} />
+            <Slider label="SEAMS" hint="Soft, painterly edges between bands" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
+          </>
+        )}
+        {g.type === 'halo' && (
+          <>
+            <Slider label="SIZE" value={g.composition.size} min={0.1} max={1.2} onChange={(v) => update((d) => void (d.composition.size = v), false)} format={(v) => `${Math.round(v * 100)}`} />
+            <Slider label="RING" hint="Ring thickness" value={g.composition.softness} onChange={(v) => update((d) => void (d.composition.softness = v), false)} />
+            <Slider label="CORONA" hint="Glow outside the ring" value={g.composition.glow} onChange={(v) => update((d) => void (d.composition.glow = v), false)} />
           </>
         )}
         <Slider label="ROTATE" value={g.composition.rotation} min={-180} max={180} step={1} format={(v) => `${Math.round(v)}°`} onChange={(v) => update((d) => void (d.composition.rotation = v), false)} />

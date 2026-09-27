@@ -2,7 +2,7 @@
 // returns for "text → gradient", and a sanitizer that never trusts it blindly.
 import type { GradientType, MotionMode, Symmetry } from '../types';
 
-export const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame'];
+export const TYPES: GradientType[] = ['linear', 'radial', 'conic', 'mesh', 'frame', 'aperture', 'bands', 'halo'];
 export const SYMMETRIES: Symmetry[] = ['none', 'mirror', 'quadrant', 'kaleido'];
 export const MOTIONS: MotionMode[] = ['none', 'drift', 'rotate', 'pulse', 'flow'];
 export const MAX_PROMPT = 200;
@@ -17,6 +17,9 @@ export interface AiGradient {
   colors: string[];
   symmetry: Symmetry;
   motion: MotionMode;
+  size: number;
+  glow: number;
+  bands: number;
   fog: number;
   haze: number;
   frost: number;
@@ -32,7 +35,7 @@ const str = { type: 'string' } as const;
 export const AI_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'place', 'time', 'coords', 'type', 'angle', 'colors', 'symmetry', 'motion', 'fog', 'haze', 'frost', 'clouds', 'heat', 'dusk', 'note'],
+  required: ['name', 'place', 'time', 'coords', 'type', 'angle', 'colors', 'symmetry', 'motion', 'size', 'glow', 'bands', 'fog', 'haze', 'frost', 'clouds', 'heat', 'dusk', 'note'],
   properties: {
     name: { type: 'string', description: 'Evocative 1-3 word colour name in caps, e.g. GLACIER HOUR' },
     place: { type: 'string', description: 'A real place in caps, e.g. ICELAND FJORD' },
@@ -43,6 +46,9 @@ export const AI_SCHEMA = {
     colors: { type: 'array', items: { type: 'string', description: 'Hex colour #RRGGBB' }, description: '3 to 6 colours in gradient order' },
     symmetry: { type: 'string', enum: SYMMETRIES },
     motion: { type: 'string', enum: MOTIONS },
+    size: { ...num, description: '0.1-1.2 size of the aperture window or halo ring; 0.6 if unused' },
+    glow: { ...num, description: '0-1 light spilling past the aperture edge onto the wall, or halo corona; 0.45 if unused' },
+    bands: { ...num, description: '2-8 number of bands for the bands type (also frame bands); 3 if unused' },
     fog: { ...num, description: '0-1 soft blur' },
     haze: { ...num, description: '0-1 film grain' },
     frost: { ...num, description: '0-1 ordered dither' },
@@ -58,6 +64,9 @@ Turn the user's description into one gradient. Choose a real place and a time of
 Guidance:
 - 3 to 6 colours, ordered as they should appear. Sky scenes usually run zenith to horizon with angle 180.
 - mesh suits organic, cloudy or watery scenes; frame suits poster-like nested soft squares; radial suits a sun, moon or glow; conic suits spinning or crystalline ideas.
+- aperture is a single window of light set in a wall, like a James Turrell Skyspace or light installation: use it for Turrell, light art, skyspaces, lightboxes, windows onto the sky. Colours run wall -> edge glow -> inner field (e.g. dark wall, then a luminous rim, then the sky inside). Use symmetry none.
+- bands suits horizons, seascapes, strata and Rothko-like colour fields: soft stacked fields in colour order; angle 180 gives horizontal bands top to bottom; bands sets how many.
+- halo suits eclipses, moon rings, coronas and rings of light: colours run background sky -> ring. Use symmetry none.
 - Keep weather subtle: haze 0.15-0.4 for texture, fog up to 0.5 for mist, frost only for pixel or retro moods, heat only for deserts or fire.
 - motion is "none" unless the description implies movement.
 - Names and places are uppercase. Everything must be safe for all audiences.
@@ -87,6 +96,9 @@ export function sanitizeAi(raw: unknown): AiGradient | null {
     colors,
     symmetry: pick(r.symmetry, SYMMETRIES, 'none'),
     motion: pick(r.motion, MOTIONS, 'none'),
+    size: typeof r.size === 'number' && Number.isFinite(r.size) ? Math.min(1.2, Math.max(0.1, r.size)) : 0.62,
+    glow: typeof r.glow === 'number' && Number.isFinite(r.glow) ? clamp01(r.glow) : 0.45,
+    bands: typeof r.bands === 'number' && Number.isFinite(r.bands) ? Math.min(8, Math.max(2, Math.round(r.bands))) : 3,
     fog: clamp01(r.fog, 0.8),
     haze: clamp01(r.haze, 0.7),
     frost: clamp01(r.frost, 0.8),

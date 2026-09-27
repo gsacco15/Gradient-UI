@@ -30,8 +30,8 @@ describe('color', () => {
 });
 
 describe('presets + names', () => {
-  it('has ten collections of curated gradients with unique ids', () => {
-    expect(COLLECTIONS).toHaveLength(10);
+  it('has eleven collections of curated gradients with unique ids', () => {
+    expect(COLLECTIONS).toHaveLength(11);
     expect(ALL_PRESETS.length).toBeGreaterThanOrEqual(85);
     expect(new Set(ALL_PRESETS.map((g) => g.id)).size).toBe(ALL_PRESETS.length);
   });
@@ -186,5 +186,23 @@ describe('text → gradient', () => {
     const res = await POST(new Request('http://x/api/generate', { method: 'POST', body: JSON.stringify({ prompt: 'fog' }) }));
     expect(res.status).toBe(503);
     if (saved) process.env.ANTHROPIC_API_KEY = saved;
+  });
+});
+
+describe('AI light-work types', () => {
+  it('accepts aperture, bands and halo with their options, clamped', async () => {
+    const { sanitizeAi } = await import('./aiSchema');
+    const { fromAi } = await import('./textGradient');
+    const base = { name: 'x', place: 'y', time: '19:40', coords: '', angle: 180, colors: ['#15131F', '#6B4FA0', '#F2C9A8'], symmetry: 'quadrant', motion: 'none', fog: 0, haze: 0, frost: 0, clouds: 0, heat: 0, dusk: 0, note: '' };
+    const a = sanitizeAi({ ...base, type: 'aperture', size: 5, glow: -1, bands: 20 })!;
+    expect(a.type).toBe('aperture');
+    expect(a.size).toBe(1.2);
+    expect(a.glow).toBe(0);
+    expect(a.bands).toBe(8);
+    const g = fromAi(a);
+    expect(g.composition.symmetry).toBe('none'); // one aperture, never mirrored copies
+    const b = sanitizeAi({ ...base, type: 'bands', bands: 4 })!;
+    expect(fromAi(b).composition.count).toBe(4);
+    expect(sanitizeAi({ ...base, type: 'halo' })!.size).toBe(0.62); // missing -> default
   });
 });

@@ -69,6 +69,7 @@ export interface Place {
 
 export const PLACES: Place[] = [
   { place: 'ICELAND FJORD', coords: '64.14° N · 21.94° W', mood: 'cold' },
+  { place: 'RODEN CRATER', coords: '35.43° N · 111.26° W', mood: 'warm' },
   { place: 'PATAGONIA', coords: '50.94° S · 73.40° W', mood: 'cold' },
   { place: 'SAHARA', coords: '23.41° N · 25.66° E', mood: 'warm' },
   { place: 'ATACAMA', coords: '24.50° S · 69.25° W', mood: 'warm' },

@@ -170,6 +170,20 @@ const DATA: Record<string, { title: string; blurb: string; rows: Row[] }> = {
       ['ICEBERG', 'SVALBARD', '11:40', 'conic', ['#EAF6FF', '#7CC1E4', '#2D5F8A', '#EAF6FF'], { composition: { symmetry: 'kaleido', slices: 6 }, weather: { fog: 0.4, haze: 0.2 } }],
     ],
   },
+  light: {
+    title: 'LIGHT WORKS',
+    blurb: 'Apertures, horizons and rings of light, for walls and LEDs.',
+    rows: [
+      ['SKYSPACE', 'RODEN CRATER', '19:40', 'aperture', ['#15131F', '#6B4FA0', '#F2C9A8'], { composition: { size: 0.62, softness: 0.5, glow: 0.5 }, weather: { fog: 0.2, haze: 0.2 } }],
+      ['APERTURE VIOLET', 'RODEN CRATER', '19:12', 'aperture', ['#0B1026', '#6B4AB8', '#F2C9B8'], { composition: { size: 0.72, softness: 0.7, glow: 0.6 }, weather: { fog: 0.35, haze: 0.3 } }],
+      ['GANZFELD', 'MAUNA KEA', '21:05', 'aperture', ['#1B1430', '#C24DF0', '#FF8FB0'], { composition: { shape: 'circle', size: 0.85, softness: 0.95, glow: 0.8 }, weather: { fog: 0.4, haze: 0.2 } }],
+      ['CHAPEL LIGHT', 'PROVENCE', '07:20', 'aperture', ['#E9E2D6', '#F6B47A', '#FFF1DC'], { composition: { shape: 'arch', size: 0.6, softness: 0.4, glow: 0.35 }, weather: { haze: 0.25 } }],
+      ['SEA HORIZON', 'ICELAND FJORD', '22:10', 'bands', ['#A9C8EC', '#E8D8C8', '#2C3E7A', '#141B3A'], { angle: 180, composition: { count: 4, softness: 0.6 }, weather: { fog: 0.25, haze: 0.3 } }],
+      ['ROTHKO DUSK', 'SAHARA', '19:30', 'bands', ['#3B1420', '#C8643B', '#E8744A'], { angle: 180, composition: { count: 3, softness: 0.9 }, weather: { fog: 0.3, haze: 0.35 } }],
+      ['TOTALITY', 'ATACAMA', '13:42', 'halo', ['#05060A', '#1B1430', '#F4F1EA'], { composition: { size: 0.55, softness: 0.15, glow: 0.6 }, weather: { haze: 0.3 } }],
+      ['MOON RING', 'LOFOTEN', '23:50', 'halo', ['#0B1026', '#2C3E7A', '#DCEEFA'], { composition: { size: 0.85, softness: 0.4, glow: 0.4 }, weather: { fog: 0.2, haze: 0.3 } }],
+    ],
+  },
 };
 
 export const COLLECTIONS: Collection[] = Object.entries(DATA).map(([id, c]) => ({
