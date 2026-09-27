@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { COLLECTIONS } from '../data/collections';
 import { cloneGradient } from '../lib/gradient';
 import { download } from '../lib/exportCode';
-import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
+import { palette256, paletteFromGradient, renderEffect, WLED_EFFECTS, wledPaletteJson, type WledEffect } from '../lib/wled';
+import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, toLed, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
 import { GradientRenderer } from '../render/renderer';
 import { linkTo } from '../router';
 import { useStore } from '../store';
@@ -30,12 +31,16 @@ interface Look {
   wires: boolean;
   bezel: Bezel;
   bezelWidth: BezelWidth;
+  mode: 'sky' | 'wled';
+  fx: WledEffect;
+  fxSpeed: number; // 0..1
+  fxSize: number; // 0..1
   playing: boolean;
 }
 
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth }, source: 'studio' };
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth, mode: 'sky' as const, fx: 'colorwaves' as WledEffect, fxSpeed: 0.35, fxSize: 0.5 }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -76,7 +81,9 @@ export default function LedLab() {
   const typeId = LED_TYPES.find((t) => Math.abs(t.pitch - s.pitch) < 0.01)?.id ?? 'custom';
 
   const serial = useSerial();
-  const engine = useLedEngine(g, layout, s, look, serial.send);
+  const stops = useMemo(() => paletteFromGradient(src), [src]);
+  const pal = useMemo(() => palette256(stops), [stops]);
+  const engine = useLedEngine(g, layout, s, look, serial.send, pal);
 
   return (
     <div className="landing led">
@@ -98,7 +105,7 @@ export default function LedLab() {
           <canvas ref={engine.canvas} className="led-canvas" aria-label={`${g.name} on ${stats.count} LEDs`} />
           <div className="led-stage-top">
             <span>
-              {g.name} · {g.place}
+              {look.mode === 'wled' ? `WLED · ${WLED_EFFECTS.find((f) => f.id === look.fx)?.label} · ${g.name} palette` : `${g.name} · ${g.place}`}
             </span>
             <span>
               {mmToIn(s.frameW).toFixed(1)} × {mmToIn(s.frameH).toFixed(1)} in · {stats.count} LEDs
@@ -107,7 +114,7 @@ export default function LedLab() {
           <div className="led-stage-bar">
             <Seg value={look.view} onChange={(view) => setLook({ ...look, view })} options={[['diffused', 'Diffused'], ['leds', 'Bare LEDs'], ['split', 'Split']]} />
             <Seg value={look.room} onChange={(room) => setLook({ ...look, room })} options={[['dark', 'Dark room'], ['light', 'Daylight']]} />
-            {g.motion.mode !== 'none' && (
+            {(g.motion.mode !== 'none' || look.mode === 'wled') && (
               <button className="led-chip" onClick={() => setLook({ ...look, playing: !look.playing })}>
                 {look.playing ? 'Pause' : 'Play'}
               </button>
@@ -129,6 +136,33 @@ export default function LedLab() {
                 </optgroup>
               ))}
             </select>
+          </Group>
+
+          <Group title="Mode">
+            <Seg value={look.mode} onChange={(mode) => setLook({ ...look, mode })} options={[['sky', 'Exact sky'], ['wled', 'WLED palette']]} />
+            {look.mode === 'wled' ? (
+              <>
+                <div className="led-palette" style={{ background: `linear-gradient(90deg, ${stops.map((p) => `${p.color} ${((p.pos / 255) * 100).toFixed(1)}%`).join(', ')})` }} aria-label="Palette" />
+                <select value={look.fx} onChange={(e) => setLook({ ...look, fx: e.target.value as WledEffect })} aria-label="WLED effect">
+                  {WLED_EFFECTS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="led-hint">{WLED_EFFECTS.find((f) => f.id === look.fx)?.note}</p>
+                <Slider label="Speed" value={look.fxSpeed} onChange={(fxSpeed) => setLook({ ...look, fxSpeed })} min={0} max={1} step={0.01} show={String(Math.round(look.fxSpeed * 255))} />
+                <Slider label="Intensity" value={look.fxSize} onChange={(fxSize) => setLook({ ...look, fxSize })} min={0} max={1} step={0.01} show={String(Math.round(look.fxSize * 255))} />
+                <button className="l-pill dark" onClick={() => download('palette0.json', wledPaletteJson(stops), 'application/json')}>
+                  Download WLED palette
+                </button>
+                <p className="led-hint">
+                  Your sky's exact colours, moved by a WLED effect. The preview recreates WLED's effects closely, but the real box may differ slightly in speed and pattern. Speed and intensity use WLED's 0–255 scale so you can copy the numbers. To install: upload palette0.json in WLED's file editor (your-wled-address/edit), then pick it in the palette list.
+                </p>
+              </>
+            ) : (
+              <p className="led-hint">Your sky exactly as designed: every LED shows its own colour, with your motion.</p>
+            )}
           </Group>
 
           <Group title="Frame">
@@ -224,7 +258,7 @@ export default function LedLab() {
                   Stream over USB (Chrome)
                 </button>
               )}
-              <button className="l-pill ghost" onClick={() => engine.exportSketch(src.name)} disabled={engine.exporting}>
+              <button className="l-pill ghost" onClick={() => engine.exportSketch(src.name)} disabled={engine.exporting || look.mode === 'wled'} title={look.mode === 'wled' ? 'The sketch plays the exact sky. Switch to Exact sky to export it.' : undefined}>
                 {engine.exporting ? 'Rendering…' : 'Arduino sketch'}
               </button>
               <button className="l-pill ghost" onClick={() => download(`atmos-${slug(src.name)}-led-map.json`, layoutJson(layout, s, src.name), 'application/json')}>
@@ -252,10 +286,11 @@ const diffuserLook = (d: number) => {
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 /** Renders the sky at one pixel per LED every frame, draws the preview, and hands frames to the serial port. */
-function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look, send: (rgb: Uint8Array) => void) {
+function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look, send: (rgb: Uint8Array) => void, pal: Uint8Array) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const state = useRef({ g, layout, s, look, send });
-  state.current = { g, layout, s, look, send };
+  const state = useRef({ g, layout, s, look, send, pal });
+  state.current = { g, layout, s, look, send, pal };
+  const fxTime = useRef(0);
   const [exporting, setExporting] = useState(false);
   const tools = useRef<{ r: GradientRenderer; read: CanvasRenderingContext2D; grid: HTMLCanvasElement } | null>(null);
   const phase = useRef(0);
@@ -283,9 +318,23 @@ function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop);
       const { g, look } = state.current;
-      if (g.motion.mode !== 'none' && look.playing) phase.current = (phase.current + (last ? (t - last) / 1000 : 0) / Math.max(1, g.motion.duration)) % 1;
+      const dt = last ? (t - last) / 1000 : 0;
       last = t;
-      const frame = sampleAt(phase.current);
+      let frame: { screen: Uint8Array; drive: Uint8Array };
+      if (look.mode === 'wled') {
+        if (look.playing) fxTime.current += dt;
+        const { layout, pal } = state.current;
+        const raw = renderEffect(look.fx, layout, pal, fxTime.current, look.fxSpeed, look.fxSize);
+        const screen = new Uint8Array(raw.length), drive = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) {
+          screen[i] = Math.round(raw[i] * look.brightness);
+          drive[i] = toLed(raw[i], look.brightness, look.gamma);
+        }
+        frame = { screen, drive };
+      } else {
+        if (g.motion.mode !== 'none' && look.playing) phase.current = (phase.current + dt / Math.max(1, g.motion.duration)) % 1;
+        frame = sampleAt(phase.current);
+      }
       state.current.send(frame.drive);
       draw(canvas.current, tools.current!.grid, state.current, frame.screen);
     };
