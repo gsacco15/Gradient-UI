@@ -1,4 +1,5 @@
 import { lazy, StrictMode, Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { createRoot } from 'react-dom/client';
 import { AuthDialog } from './components/AuthDialog';
 import Landing, { CommunityPage } from './landing/Landing';
@@ -47,6 +48,7 @@ function Root() {
     <>
       <Suspense fallback={<div className="gate-wait" />}>{page}</Suspense>
       <AuthDialog />
+      <Analytics />
     </>
   );
 }

@@ -17,10 +17,10 @@ export const accountsEnabled = !!supabase;
 interface AuthState {
   session: Session | null;
   ready: boolean;
-  dialog: null | 'signin' | 'signup';
+  dialog: null | 'signin' | 'signup' | 'reset';
   reason: string | null; // why we're asking, shown under the title
   afterAuth: (() => void) | null;
-  open: (mode?: 'signin' | 'signup', then?: () => void, reason?: string) => void;
+  open: (mode?: 'signin' | 'signup' | 'reset', then?: () => void, reason?: string) => void;
   close: () => void;
 }
 
@@ -36,9 +36,14 @@ export const useAuth = create<AuthState>((set) => ({
 
 if (supabase) {
   supabase.auth.getSession().then(({ data }) => useAuth.setState({ session: data.session, ready: true }));
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     const { afterAuth } = useAuth.getState();
     useAuth.setState({ session });
+    // Arrived from a password reset email: ask for the new password straight away.
+    if (event === 'PASSWORD_RECOVERY') {
+      useAuth.setState({ dialog: 'reset', afterAuth: null, reason: null });
+      return;
+    }
     if (session && afterAuth) {
       useAuth.setState({ afterAuth: null });
       afterAuth();
@@ -71,6 +76,10 @@ const friendly = (msg: string) =>
           ? 'Check your inbox to confirm your email first.'
           : /rate limit/i.test(msg)
             ? 'Too many attempts. Wait a minute and try again.'
+            : /session missing|expired|invalid.*(token|link)/i.test(msg)
+              ? 'This link has expired. Tap “Forgot password?” to get a new one.'
+              : /should be different/i.test(msg)
+                ? 'Choose a password you haven’t used before.'
             : msg;
 
 export async function signUp(email: string, password: string, name: string) {
@@ -91,6 +100,17 @@ export async function signIn(email: string, password: string) {
 
 export async function sendMagicLink(email: string) {
   const { error } = await need().auth.signInWithOtp({ email, options: { emailRedirectTo: `${location.origin}/studio` } });
+  if (error) throw new Error(friendly(error.message));
+}
+
+/** Email a link that signs you in and asks for a new password. */
+export async function sendPasswordReset(email: string) {
+  const { error } = await need().auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/` });
+  if (error) throw new Error(friendly(error.message));
+}
+
+export async function updatePassword(password: string) {
+  const { error } = await need().auth.updateUser({ password });
   if (error) throw new Error(friendly(error.message));
 }
 
