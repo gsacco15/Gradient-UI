@@ -17,10 +17,10 @@ import { linkTo, navigate } from './router';
 import { useStore, type View } from './store';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
-  { id: 'gradient', label: 'GRADIENT', hint: 'Edit' },
-  { id: 'horizon', label: 'HORIZON', hint: 'Photo → film' },
-  { id: 'interface', label: 'INTERFACE', hint: 'See it on screens' },
-  { id: 'poster', label: 'POSTER', hint: 'Print it' },
+  { id: 'gradient', label: 'Gradient', hint: 'Edit the gradient' },
+  { id: 'horizon', label: 'Horizon', hint: 'Turn a photo into a moving film' },
+  { id: 'interface', label: 'Interface', hint: 'See it on real screens' },
+  { id: 'poster', label: 'Poster', hint: 'Print it' },
 ];
 
 type MobilePane = 'canvas' | 'library' | 'inspector';
@@ -53,18 +53,17 @@ export default function App() {
         </div>
         {view === 'gradient' && <StopBar />}
         <nav className="view-tabs">
-          {VIEWS.map((v) => (
-            <button key={v.id} className={view === v.id ? 'on' : ''} onClick={() => useStore.getState().setView(v.id)}>
-              [ {v.label} ]<span className="muted"> {v.hint}</span>
-            </button>
-          ))}
-          {view === 'gradient' && <span className="kbd-hint">DOUBLE-CLICK CANVAS TO ADD · HOLD C TO COMPARE · ⌘Z UNDO</span>}
-          <a className="how-link lab-link" {...linkTo('/led')} title="Preview this sky as an LED light piece and get the build sheet">
-            LED LAB ↗
+          <div className="view-seg" role="tablist" aria-label="Views">
+            {VIEWS.map((v) => (
+              <button key={v.id} role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => useStore.getState().setView(v.id)} title={v.hint}>
+                {v.label}
+              </button>
+            ))}
+          </div>
+          {view === 'gradient' && <span className="kbd-hint">DOUBLE-CLICK TO ADD · HOLD C TO COMPARE · ⌘Z UNDO</span>}
+          <a className="lab-link" {...linkTo('/led')} title="Preview this sky as an LED light piece and get the build sheet">
+            LED Lab ↗
           </a>
-          <button className="how-link" onClick={() => useStore.getState().set({ welcomeOpen: true })} title="Shortcut: ?">
-            HOW IT WORKS
-          </button>
         </nav>
       </main>
       <aside className="right">
