@@ -35,3 +35,17 @@ describe('/g/<code> link previews', () => {
     expect(tags).toContain('&lt;script&gt;');
   });
 });
+
+describe('/led link preview', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('serves the Lab card', async () => {
+    vi.resetModules();
+    const shell = '<head><!-- share:start --><title>Atmos</title><!-- share:end --></head>';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(shell)));
+    const { GET } = await import('../../api/share');
+    const html = await (await GET(new Request('https://atmos.app/api/share?page=lab'))).text();
+    expect(html).toContain('<title>Atmos Lab — put your sky on the wall</title>');
+    expect(html).toContain('og:image" content="https://atmos.app/og-lab.jpg?v=1"');
+    expect(html).toContain('og:url" content="https://atmos.app/led"');
+  });
+});

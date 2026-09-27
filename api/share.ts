@@ -29,6 +29,38 @@ async function lookup(slug: string): Promise<Row | null> {
   }
 }
 
+/** Head tags for a page: title, description and a large link-card image. */
+export function pageTags(t: { title: string; description: string; url: string; image: string | null; alt?: string }): string {
+  return [
+    `<title>${esc(t.title)}</title>`,
+    `<meta name="description" content="${esc(t.description)}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="Atmos" />`,
+    `<meta property="og:title" content="${esc(t.title)}" />`,
+    `<meta property="og:description" content="${esc(t.description)}" />`,
+    `<meta property="og:url" content="${esc(t.url)}" />`,
+    t.image ? `<meta property="og:image" content="${esc(t.image)}" />` : '',
+    t.image ? `<meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" />` : '',
+    t.image && t.alt ? `<meta property="og:image:alt" content="${esc(t.alt)}" />` : '',
+    `<meta name="twitter:card" content="${t.image ? 'summary_large_image' : 'summary'}" />`,
+    `<meta name="twitter:title" content="${esc(t.title)}" />`,
+    `<meta name="twitter:description" content="${esc(t.description)}" />`,
+    t.image ? `<meta name="twitter:image" content="${esc(t.image)}" />` : '',
+  ]
+    .filter(Boolean)
+    .join('\n    ');
+}
+
+/** The Lab's own link card. */
+export const labTags = (origin: string) =>
+  pageTags({
+    title: 'Atmos Lab — put your sky on the wall',
+    description: 'Turn any gradient into an LED light piece in the spirit of James Turrell. Preview it on your frame, get the build sheet, and send it to your LEDs.',
+    url: `${origin}/led`,
+    image: `${origin}/og-lab.jpg?v=1`,
+    alt: 'An oval LED light piece: bare LEDs on one half, the diffused glow on the other, beside the words Put your sky on the wall.',
+  });
+
 export function metaTags(row: Row, pageUrl: string): string {
   const title = `${row.name} · Atmos`;
   const colours = (row.gradient.points ?? []).map((p) => p.color).filter(Boolean).slice(0, 6).join(' · ');
@@ -56,6 +88,13 @@ export function metaTags(row: Row, pageUrl: string): string {
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug') ?? '';
+  if (url.searchParams.get('page') === 'lab') {
+    const shell = await fetch(new URL('/index.html', url.origin)).then((r) => r.text());
+    return new Response(shell.replace(/<!-- share:start[\s\S]*?share:end -->/, labTags(url.origin)), {
+      status: 200,
+      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' },
+    });
+  }
   const [shell, row] = await Promise.all([fetch(new URL('/index.html', url.origin)).then((r) => r.text()), lookup(slug)]);
   const pageUrl = `${url.origin}/g/${slug}`;
   const html = row ? shell.replace(/<!-- share:start[\s\S]*?share:end -->/, metaTags(row, pageUrl)) : shell;

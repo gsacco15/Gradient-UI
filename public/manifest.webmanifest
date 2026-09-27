@@ -1,0 +1,14 @@
+{
+  "name": "Atmos",
+  "short_name": "Atmos",
+  "description": "Gradients drawn from the sky, and LED light pieces for your wall.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0d0c",
+  "theme_color": "#f5f4f0",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

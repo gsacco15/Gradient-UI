@@ -6,6 +6,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/led",
+      "destination": "/api/share?page=lab"
+    },
+    {
       "source": "/g/:slug",
       "destination": "/api/share?slug=:slug"
     },
