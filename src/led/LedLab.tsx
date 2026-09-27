@@ -32,11 +32,12 @@ interface Look {
   bezel: Bezel;
   bezelWidth: BezelWidth;
   playing: boolean;
+  spill?: boolean; // light spilling onto the wall around the piece
 }
 
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth }, source: 'studio' };
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, spill: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -47,7 +48,7 @@ const load = (): { s: LedSettings; look: Look; source: string } => {
 
 /** The piece shown on the home page: a dense oval, no bezel, bare LEDs beside the diffused glow. */
 const PIECE: LedSettings = { frameW: 18 * 25.4, frameH: 24 * 25.4, shape: 'oval', pitch: 1000 / 144, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
-const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, bezel: 'black', bezelWidth: 'none' };
+const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, spill: false, bezel: 'black', bezelWidth: 'none' };
 let pieceLayout: LedLayout | null = null;
 
 /** A still of any sky as an LED piece, drawn when it scrolls into view and whenever the sky or size changes. */
@@ -100,11 +101,13 @@ export default function LedLab() {
   const initial = useMemo(load, []);
   // A sky handed over from the home page ("Open the Lab"), carried in the link.
   const [linked] = useState(() => gradientFromHash(location.hash));
+  // "?piece" = open exactly as the home page showed it: same frame, LEDs, view and brightness.
+  const [asPiece] = useState(() => !!linked && new URLSearchParams(location.search).has('piece'));
   useEffect(() => {
     if (linked) history.replaceState(null, '', '/led');
   }, [linked]);
-  const [s, setS] = useState<LedSettings>(initial.s);
-  const [look, setLook] = useState<Look>(initial.look);
+  const [s, setS] = useState<LedSettings>(asPiece ? PIECE : initial.s);
+  const [look, setLook] = useState<Look>(asPiece ? { ...PIECE_LOOK, playing: true } : initial.look);
   const [source, setSource] = useState(linked ? 'linked' : initial.source);
   const studio = useStore((st) => st.gradient);
   const src = useMemo(
@@ -174,6 +177,9 @@ export default function LedLab() {
           <div className="led-stage-bar">
             <Seg value={look.view} onChange={(view) => setLook({ ...look, view })} options={[['diffused', 'Diffused'], ['leds', 'Bare LEDs'], ['split', 'Split']]} />
             <Seg value={look.room} onChange={(room) => setLook({ ...look, room })} options={[['dark', 'Dark room'], ['light', 'Daylight']]} />
+            <button className={`led-chip ${look.spill !== false ? 'on' : ''}`} onClick={() => setLook({ ...look, spill: look.spill === false })} aria-pressed={look.spill !== false} title="Light spilling onto the wall around the piece">
+              Wall glow {look.spill !== false ? 'on' : 'off'}
+            </button>
             {g.motion.mode !== 'none' && (
               <button className="led-chip" onClick={() => setLook({ ...look, playing: !look.playing })}>
                 {look.playing ? 'Pause' : 'Play'}
@@ -519,14 +525,24 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
   };
 
   const diffusedAny = look.view !== 'leds';
-  // Light spilling onto the wall around the piece.
-  if (diffusedAny) {
+  // Light spilling onto the wall around the piece, in the piece's own shape.
+  if (diffusedAny && look.spill !== false) {
+    const fw = s.frameW * k, fh = s.frameH * k;
+    const t = scratch('spill'), tw = Math.max(4, Math.round(fw / 6)), th = Math.max(4, Math.round(fh / 6));
+    t.width = tw;
+    t.height = th;
+    const tc = t.getContext('2d')!;
+    tc.save();
+    tc.scale(tw / fw, th / fh);
+    tc.translate(-ox, -oy);
+    tc.clip(shapePath(0));
+    tc.imageSmoothingEnabled = true;
+    tc.drawImage(grid, gx, gy, gw, gh);
+    tc.restore();
     ctx.save();
     ctx.globalAlpha = dark ? 0.55 : 0.18;
-    ctx.filter = `blur(${Math.round(Math.min(W, H) * 0.08)}px)`;
-    ctx.imageSmoothingEnabled = true;
-    const spread = 1.35;
-    ctx.drawImage(grid, ox + (s.frameW * k * (1 - spread)) / 2, oy + (s.frameH * k * (1 - spread)) / 2, s.frameW * k * spread, s.frameH * k * spread);
+    const spread = 1.3;
+    blurDraw(ctx, t, ox + (fw * (1 - spread)) / 2, oy + (fh * (1 - spread)) / 2, fw * spread, fh * spread, Math.min(W, H) * 0.08);
     ctx.restore();
   }
 
@@ -556,9 +572,11 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
     // Further from the LEDs, the light spreads wider and each LED's hot spot fades out.
     // Bouncing off the back roughly doubles the path and hides the LEDs; edge light is already a wash.
     const ratio = spreadRatio(mount, look.diffusion);
-    ctx.filter = `blur(${Math.max(0.5, pitch * k * ratio * 0.7).toFixed(1)}px)${mount === 'bounce' ? ' brightness(0.88)' : ''}`;
-    ctx.drawImage(grid, gx, gy, gw, gh);
-    ctx.filter = 'none';
+    blurDraw(ctx, grid, gx, gy, gw, gh, Math.max(0.5, pitch * k * ratio * 0.7));
+    if (mount === 'bounce') {
+      ctx.fillStyle = 'rgba(0,0,0,0.12)'; // a little light lost in the bounce
+      ctx.fill(inner);
+    }
     const hot = mount === 'forward' ? Math.min(1, Math.max(0, (1.4 - ratio) / 1.1)) : 0;
     if (hot > 0) {
       ctx.globalCompositeOperation = 'lighter';
@@ -660,6 +678,51 @@ const MOUNT_NOTES: Record<Mount, string> = {
   bounce: 'LEDs point backward at a matte white back panel, and the diffuser only sees reflected light. Smoothest glow in a shallow box, slightly softer picture, about 10–20% dimmer.',
   edge: 'One strip around the inside edge, shining inward across a white-lined box. Very few LEDs and an even Turrell-style wash, but only the edge colours can be controlled, so the middle is a blend.',
 };
+
+const scratchCanvases = new Map<string, HTMLCanvasElement>();
+const scratch = (name: string) => {
+  let c = scratchCanvases.get(name);
+  if (!c) scratchCanvases.set(name, (c = document.createElement('canvas')));
+  return c;
+};
+
+/** Canvas blur isn't in every browser (iPhone Safari has lacked it), so check once. */
+let canFilter: boolean | null = null;
+const hasCanvasFilter = () =>
+  (canFilter ??= !(window as unknown as { __atmosNoCanvasFilter?: boolean }).__atmosNoCanvasFilter && typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype);
+
+/**
+ * Draw an image blurred by about r pixels. Uses the canvas blur filter where it exists; otherwise
+ * shrinks the image (with a clear border so edges fade out too) and lets smooth upscaling blur it.
+ */
+function blurDraw(ctx: CanvasRenderingContext2D, src: CanvasImageSource, x: number, y: number, w: number, h: number, r: number) {
+  ctx.imageSmoothingEnabled = true;
+  if (r < 0.75) return void ctx.drawImage(src, x, y, w, h);
+  if (hasCanvasFilter()) {
+    ctx.filter = `blur(${r.toFixed(1)}px)`;
+    ctx.drawImage(src, x, y, w, h);
+    ctx.filter = 'none';
+    return;
+  }
+  const step = Math.max(1, r / 1.5), pad = 2;
+  const iw = Math.max(1, Math.round(w / step)), ih = Math.max(1, Math.round(h / step));
+  const a = scratch('blurA');
+  a.width = iw + pad * 2;
+  a.height = ih + pad * 2;
+  const ac = a.getContext('2d')!;
+  ac.clearRect(0, 0, a.width, a.height);
+  ac.imageSmoothingEnabled = true;
+  ac.drawImage(src, pad, pad, iw, ih);
+  // A second, half-size pass rounds off the blockiness of a single upscale.
+  const b = scratch('blurB');
+  b.width = Math.max(2, Math.round(a.width / 2));
+  b.height = Math.max(2, Math.round(a.height / 2));
+  const bc = b.getContext('2d')!;
+  bc.clearRect(0, 0, b.width, b.height);
+  bc.imageSmoothingEnabled = true;
+  bc.drawImage(a, 0, 0, b.width, b.height);
+  ctx.drawImage(b, x - pad * step, y - pad * step, a.width * step, a.height * step);
+}
 
 const FILL_PAD = 3;
 const nearCache = new WeakMap<LedLayout, Int32Array>();

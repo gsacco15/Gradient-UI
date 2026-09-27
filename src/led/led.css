@@ -76,3 +76,5 @@
   .led-exp { font-size: 0; gap: 0; }
   .led-exp::before { width: 7px; height: 7px; }
 }
+.led-chip.on { background: rgba(255, 255, 255, 0.14); }
+.led-stage.room-light .led-chip.on { background: rgba(0, 0, 0, 0.08); }

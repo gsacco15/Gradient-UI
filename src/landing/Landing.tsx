@@ -160,7 +160,7 @@ function LabSection({ g: heroSky }: { g: Gradient }) {
             </li>
           </ul>
           <div className="l-lab-actions">
-            <a className="l-pill light big" {...linkTo(`/led#g=${encodeGradient(g)}`)}>
+            <a className="l-pill light big" {...linkTo(`/led?piece#g=${encodeGradient(g)}`)}>
               Open the Lab with this sky →
             </a>
             <span className="l-lab-note">Free · works with WS2812B strips and WLED</span>
