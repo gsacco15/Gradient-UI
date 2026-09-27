@@ -99,6 +99,7 @@
 .l-tile:hover { transform: translateY(-3px); box-shadow: 0 24px 50px -30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.04); }
 .l-tile.wide { grid-column: span 2; }
 .l-tile .l-tile-art { aspect-ratio: auto !important; height: 220px; }
+.l-tile-img { display: block; width: 100%; object-fit: cover; }
 .l-tile-text { padding: 22px 24px 26px; display: flex; flex-direction: column; gap: 8px; }
 .l-tag { align-self: flex-start; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; padding: 4px 9px; border-radius: 999px; background: var(--l-bg); color: var(--l-sub); }
 .l-tile h3 { font-size: 24px; letter-spacing: -0.035em; font-weight: 650; }

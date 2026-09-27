@@ -11,6 +11,7 @@ import { accountsEnabled, displayName, listCommunity, myLikes, requireAccount, s
 import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
+import horizonSample from './horizon-sample.webp';
 import './landing.css';
 
 const preset = (name: string) => ALL_PRESETS.find((g) => g.name === name) ?? ALL_PRESETS[0];
@@ -267,12 +268,12 @@ function TryStrip({ sky }: { sky: Sky }) {
   );
 }
 
-const FEATURES: { title: string; body: string; g: string; tag: string; wide?: boolean }[] = [
+const FEATURES: { title: string; body: string; g: string; tag: string; wide?: boolean; img?: string }[] = [
   { tag: 'AI', title: 'Say it, see it', body: 'Type “moss after a storm” and Claude picks the colours, the place and the hour.', g: 'WET CANOPY', wide: true },
   { tag: 'EDIT', title: 'Shape it by hand', body: 'Drag colour points, add fog, grain and dither, make it move or follow the cursor.', g: 'QUADRANT NEBULA' },
   { tag: 'UI', title: 'See it on real screens', body: 'Paint buttons, cards and headers, check contrast, copy the code.', g: 'CORONA' },
   { tag: 'PRINT', title: 'Posters at 300 DPI', body: 'Field-note typography, bone or ink paper, ready for the print shop.', g: 'RED MESA' },
-  { tag: 'FILM', title: 'Photos into horizons', body: 'Scan any photo line by line into a slow moving film. Save stills or MP4.', g: 'TIDE LINE' },
+  { tag: 'FILM', title: 'Photos into horizons', body: 'Scan any photo line by line into a slow moving film. Save stills or MP4.', g: 'TIDE LINE', img: horizonSample },
 ];
 
 function Features() {
@@ -285,7 +286,11 @@ function Features() {
       <div className="l-bento">
         {FEATURES.map((f) => (
           <article key={f.title} className={`l-tile ${f.wide ? 'wide' : ''}`}>
-            <Thumb g={preset(f.g)} w={f.wide ? 640 : 320} h={320} className="l-tile-art" />
+            {f.img ? (
+              <img src={f.img} alt="A photo scanned into horizontal bands of sea, sand and sky" className="l-tile-art l-tile-img" loading="lazy" />
+            ) : (
+              <Thumb g={preset(f.g)} w={f.wide ? 640 : 320} h={320} className="l-tile-art" />
+            )}
             <div className="l-tile-text">
               <span className="l-tag">{f.tag}</span>
               <h3>{f.title}</h3>
