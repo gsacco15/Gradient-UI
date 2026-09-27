@@ -81,3 +81,4 @@
 .led-group { position: relative; }
 .led-reset { position: absolute; top: 12px; right: 0; font: inherit; font-size: 12px; color: var(--l-sub); background: none; border: 0; padding: 4px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .led-reset:hover { color: var(--l-ink); }
+.led-bp { background: #163f8c !important; }

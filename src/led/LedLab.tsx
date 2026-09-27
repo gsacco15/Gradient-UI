@@ -6,6 +6,7 @@ import { download } from '../lib/exportCode';
 import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, gridFor, wledStill, type Mount, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
 import { GradientRenderer, renderPixels } from '../render/renderer';
 import { gradientFromHash } from '../lib/share';
+import { blueprintHtml, blueprintSvg, templateHtml, templatePages, type BuildInfo, type Paper } from '../lib/blueprint';
 import { linkTo } from '../router';
 import { useStore } from '../store';
 import type { Gradient } from '../types';
@@ -171,6 +172,25 @@ export default function LedLab() {
   const glow = useMemo(() => [...src.points].sort((a, b) => a.pos - b.pos)[Math.floor(src.points.length / 2)]?.color ?? '#e0679a', [src]);
   const engine = useLedEngine(g, layout, s, look, serial.send);
   const [stillNote, setStillNote] = useState<string | null>(null);
+  const [paper, setPaper] = useState<Paper>(() => (/^en-US|^en-CA|^es-MX/.test(navigator.language) ? 'letter' : 'a4'));
+  const build = (): BuildInfo => ({
+    name: src.name,
+    place: src.place,
+    s,
+    layout,
+    stats,
+    diffuserMm: diffuserMm(s.pitch, look.diffusion),
+    boxDepth,
+    ledLabel: LED_TYPES.find((t) => Math.abs(t.pitch - s.pitch) < 0.01)?.label ?? `Custom · ${s.pitch.toFixed(1)} mm spacing`,
+  });
+  const pageCount = useMemo(() => {
+    const t = templatePages({ s, layout } as BuildInfo, paper);
+    return t.cols * t.rows;
+  }, [s, layout, paper]);
+  const openBlueprint = (b: BuildInfo) => {
+    const file = `atmos-${slug(b.name)}-blueprint.svg`;
+    openDoc(blueprintHtml(b, blueprintSvg(b), file), file.replace('.svg', '.html'));
+  };
   const copyStill = async () => {
     const json = engine.stillJson(src.name);
     if (!json) return;
@@ -344,6 +364,21 @@ export default function LedLab() {
             </p>
           </Group>
 
+          <Group title="Build it">
+            <div className="led-actions">
+              <button className="l-pill dark led-bp" onClick={() => openBlueprint(build())}>
+                Blueprint
+              </button>
+              <button className="l-pill ghost" onClick={() => openDoc(templateHtml(build(), paper), `atmos-${slug(src.name)}-template.html`)}>
+                Placement template · 1:1
+              </button>
+            </div>
+            <Seg value={paper} onChange={setPaper} options={[['letter', 'US Letter'], ['a4', 'A4']]} />
+            <p className="led-hint">
+              <strong>Blueprint</strong>: one sheet with the dimensions, LED layout and data path, a side section with the depth, the wiring and a parts list. <strong>Template</strong>: every LED at real size across {pageCount} printable page{pageCount === 1 ? '' : 's'} plus a cover; tape it to the back panel and stick the strips on the lines.
+            </p>
+          </Group>
+
           <Group title="Send to LEDs">
             <div className="led-actions">
               {serial.supported ? (
@@ -432,6 +467,14 @@ function edgeField(layout: LedLayout, s: LedSettings, rgb: Uint8Array, out: Uint
       out[p + 3] = 255;
     }
   }
+}
+
+/** Open a generated document in a new tab; if pop-ups are blocked, download it instead. */
+function openDoc(html: string, fileName: string) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  const w = window.open(url, '_blank');
+  if (!w) download(fileName, html, 'text/html');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
