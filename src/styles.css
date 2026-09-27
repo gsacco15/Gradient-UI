@@ -58,7 +58,11 @@ button:disabled { opacity: 0.35; cursor: default; }
 .actions button { padding: 7px 9px; color: var(--muted); white-space: nowrap; }
 .actions button:hover:not(:disabled), .actions button.on { color: var(--ink); }
 .actions .sep { width: 1px; height: 16px; background: var(--line); margin: 0 6px; }
-.actions .primary { background: var(--ink); color: #fff !important; padding: 8px 16px; margin-left: 4px; }
+.actions .primary { background: var(--ink); color: #fff !important; padding: 8px 16px; }
+/* Share and Export are the two main actions: kept together at the far right. */
+.main-actions { display: inline-flex; gap: 6px; margin-left: 6px; }
+.actions .outline { border: 1px solid var(--ink); color: var(--ink) !important; padding: 7px 15px; }
+.actions .outline:hover { background: var(--soft); }
 
 /* ---------------------------------------------------------------- tabs */
 .tabs { display: flex; border-bottom: 1px solid var(--line); }
@@ -368,7 +372,7 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; border-radius: 
   .topbar { flex-direction: column; align-items: stretch; padding: 10px 16px 6px; gap: 6px; }
   .actions { margin: 0 -9px; flex-wrap: wrap; overflow: visible; }
   .actions .sep { display: none; }
-  .actions .primary { margin-left: auto; }
+  .main-actions { margin-left: auto; }
   .left, .center, .right { grid-area: main; border: 0; }
   .app.pane-canvas .left, .app.pane-canvas .right { display: none; }
   .app.pane-library .center, .app.pane-library .right { display: none; }
@@ -419,3 +423,7 @@ a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .account-who span { color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
 .account-menu a, .account-menu button { text-align: left; padding: 9px 14px !important; color: var(--ink) !important; text-decoration: none; font-size: 10.5px; }
 .account-menu a:hover, .account-menu button:hover { background: var(--soft); }
+
+.view-tabs .how-link { color: var(--faint); font-size: 9.5px; padding: 4px 0; margin-left: auto; }
+.view-tabs .how-link:hover { color: var(--ink); }
+.view-tabs .kbd-hint + .how-link { margin-left: 16px; }

@@ -59,6 +59,9 @@ export default function App() {
             </button>
           ))}
           {view === 'gradient' && <span className="kbd-hint">DOUBLE-CLICK CANVAS TO ADD · HOLD C TO COMPARE · ⌘Z UNDO</span>}
+          <button className="how-link" onClick={() => useStore.getState().set({ welcomeOpen: true })} title="Shortcut: ?">
+            HOW IT WORKS
+          </button>
         </nav>
       </main>
       <aside className="right">
@@ -104,7 +107,7 @@ function useIncomingLinks() {
 function ShareButton() {
   if (!accountsEnabled) return null;
   return (
-    <button onClick={() => requireAccount(() => useStore.getState().set({ shareOpen: true }))} title="Get a link to this gradient, or post it to the community">
+    <button className="outline" onClick={() => requireAccount(() => useStore.getState().set({ shareOpen: true }))} title="Get a link to this gradient, or post it to the community">
       SHARE
     </button>
   );
@@ -140,6 +143,9 @@ function Account() {
           <a role="menuitem" {...linkTo('/#community')} onClick={(e) => { e.preventDefault(); setOpen(false); navigate('/'); setTimeout(() => document.getElementById('community')?.scrollIntoView(), 50); }}>
             COMMUNITY WALL
           </a>
+          <button role="menuitem" onClick={() => { setOpen(false); useStore.getState().set({ welcomeOpen: true }); }}>
+            HOW IT WORKS
+          </button>
           <button role="menuitem" onClick={() => { setOpen(false); confirmSignOut(); }}>
             SIGN OUT
           </button>
@@ -201,14 +207,13 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
         <button onClick={() => s().saveProject()} title="Save to this browser (⌘S)">
           SAVE
         </button>
-        <ShareButton />
-        <button onClick={() => s().set({ welcomeOpen: true })} title="What is this? (?)" aria-label="Help">
-          ?
-        </button>
         <Account />
-        <button className="primary" onClick={() => s().set({ exportOpen: true })} title="Export (E)">
-          EXPORT
-        </button>
+        <span className="main-actions">
+          <ShareButton />
+          <button className="primary" onClick={() => s().set({ exportOpen: true })} title="Export (E)">
+            EXPORT
+          </button>
+        </span>
       </div>
     </header>
   );
