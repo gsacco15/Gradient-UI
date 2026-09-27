@@ -215,7 +215,8 @@ export default function LedLab() {
           </Group>
 
           <Group title="LED direction">
-            <Seg value={s.mount ?? 'forward'} onChange={(mount) => set({ mount })} options={[['forward', 'Face forward'], ['bounce', 'Bounce off back'], ['edge', 'Edge only']]} />
+            <Seg value={s.mount ?? 'forward'} onChange={(mount) => set({ mount })} options={[['forward', 'Forward'], ['bounce', 'Bounce'], ['edge', 'Edge']]} />
+            <MountDiagram mount={s.mount ?? 'forward'} glow={stops[Math.floor(stops.length / 2)]?.color ?? '#e0679a'} />
             <p className="led-hint">{MOUNT_NOTES[s.mount ?? 'forward']}</p>
           </Group>
 
@@ -718,6 +719,73 @@ function useSerial() {
   };
 
   return { supported, connected, status, connect, disconnect, send };
+}
+
+// ---------------------------------------------------------------- side-view diagram
+
+/** A cut-away of the box from the side: wall on the left, you on the right, and where the light goes. */
+function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
+  const ray = (d: string, i: number) => <path key={i} d={d} stroke={glow} strokeWidth="1.6" fill="none" strokeLinecap="round" markerEnd="url(#led-arrow)" opacity="0.9" />;
+  const ys = [44, 66, 88, 110];
+  let leds: React.ReactNode = null, rays: React.ReactNode[] = [], label = '';
+  if (mount === 'forward') {
+    label = 'LEDs on the back, pointing at you';
+    leds = (
+      <>
+        <rect x="30" y="34" width="5" height="88" fill="#bbb" />
+        {ys.map((y) => <rect key={y} x="35" y={y - 4} width="6" height="8" rx="1.5" fill={glow} />)}
+      </>
+    );
+    rays = ys.flatMap((y) => [`M44 ${y} L236 ${y}`, `M44 ${y} L236 ${y - 14}`, `M44 ${y} L236 ${y + 14}`]).map(ray);
+  } else if (mount === 'bounce') {
+    label = 'LEDs on a rail, pointing back at the white panel';
+    leds = (
+      <>
+        <rect x="118" y="34" width="5" height="88" fill="#bbb" />
+        {ys.map((y) => <rect key={y} x="112" y={y - 4} width="6" height="8" rx="1.5" fill={glow} />)}
+      </>
+    );
+    rays = ys.flatMap((y) => [`M110 ${y} L34 ${y}`, `M34 ${y} L236 ${y - 22}`, `M34 ${y} L236 ${y + 8}`]).map(ray);
+  } else {
+    label = 'One strip around the edge, shining across the box';
+    leds = (
+      <>
+        {[60, 100].map((x) => <rect key={`t${x}`} x={x - 4} y="24" width="8" height="6" rx="1.5" fill={glow} />)}
+        {[60, 100].map((x) => <rect key={`b${x}`} x={x - 4} y="130" width="8" height="6" rx="1.5" fill={glow} />)}
+      </>
+    );
+    rays = [`M60 32 L236 90`, `M100 32 L236 118`, `M60 32 L34 70`, `M60 128 L236 70`, `M100 128 L236 42`, `M60 128 L34 90`, `M34 70 L236 60`, `M34 90 L236 100`].map(ray);
+  }
+  return (
+    <figure className="led-diagram">
+      <svg viewBox="0 0 320 160" role="img" aria-label={`Side view: ${label}`}>
+        <defs>
+          <marker id="led-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M0 0 L8 4 L0 8 z" fill={glow} />
+          </marker>
+          <marker id="led-look" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0 0 L8 4 L0 8 z" fill="#6d6b66" />
+          </marker>
+          <pattern id="led-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#c9c5bd" strokeWidth="2" />
+          </pattern>
+        </defs>
+        <rect x="6" y="8" width="16" height="144" fill="url(#led-hatch)" />
+        <rect x="22" y="18" width="8" height="124" fill="#fff" stroke="#111" strokeWidth="1" />
+        <rect x="22" y="18" width="226" height="6" fill="#111" />
+        <rect x="22" y="136" width="226" height="6" fill="#111" />
+        <rect x="238" y="24" width="8" height="112" fill="#f2f0ec" stroke="#999" strokeWidth="1" strokeDasharray="2 2" />
+        {rays}
+        {leds}
+        <text x="14" y="156" className="led-dg-t" textAnchor="middle">wall</text>
+        <text x="26" y="13" className="led-dg-t">white back</text>
+        <text x="242" y="13" className="led-dg-t" textAnchor="middle">frosted front</text>
+        <text x="290" y="84" className="led-dg-t" textAnchor="middle">you</text>
+        <path d="M278 90 L256 90" stroke="#6d6b66" strokeWidth="1" markerEnd="url(#led-look)" />
+      </svg>
+      <figcaption>Side view · {label}</figcaption>
+    </figure>
+  );
 }
 
 // ---------------------------------------------------------------- small controls
