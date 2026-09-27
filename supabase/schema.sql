@@ -51,5 +51,13 @@ create policy "delete own like" on public.gradient_likes for delete to authentic
 -- Explicit Data API access (works whether or not "automatically expose new tables" is on).
 -- Row level security above still decides which rows each person can touch.
 grant usage on schema public to anon, authenticated;
+revoke all on public.shared_gradients, public.gradient_likes, public.community_gradients from anon, authenticated;
 grant select on public.shared_gradients, public.gradient_likes, public.community_gradients to anon, authenticated;
 grant insert, delete on public.shared_gradients, public.gradient_likes to authenticated;
+
+-- Projects created with "automatic RLS" get a helper function that should not be callable over the API.
+do $$ begin
+  if exists (select 1 from pg_proc where proname = 'rls_auto_enable' and pronamespace = 'public'::regnamespace) then
+    revoke execute on function public.rls_auto_enable() from anon, authenticated, public;
+  end if;
+end $$;
