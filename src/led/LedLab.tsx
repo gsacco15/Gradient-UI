@@ -40,7 +40,7 @@ interface Look {
 
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth, mode: 'sky' as const, fx: 'colorwaves' as WledEffect, fxSpeed: 0.35, fxSize: 0.5 }, source: 'studio' };
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel, bezelWidth: 'standard' as BezelWidth, mode: 'sky' as const, fx: 'palette' as WledEffect, fxSpeed: 0, fxSize: 0.5 }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -339,8 +339,10 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
 /** Renders the sky at one pixel per LED every frame, draws the preview, and hands frames to the serial port. */
 function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look, send: (rgb: Uint8Array) => void, pal: Uint8Array) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const state = useRef({ g, layout, s, look, send, pal });
-  state.current = { g, layout, s, look, send, pal };
+  // Linear skies keep their direction in the still palette; other types run bottom to top.
+  const angle = g.type === 'linear' ? g.angle : 0;
+  const state = useRef({ g, layout, s, look, send, pal, angle });
+  state.current = { g, layout, s, look, send, pal, angle };
   const fxTime = useRef(0);
   const [exporting, setExporting] = useState(false);
   const tools = useRef<{ r: GradientRenderer; read: CanvasRenderingContext2D; grid: HTMLCanvasElement } | null>(null);
@@ -375,7 +377,7 @@ function useLedEngine(g: Gradient, layout: LedLayout, s: LedSettings, look: Look
       if (look.mode === 'wled') {
         if (look.playing) fxTime.current += dt;
         const { layout, pal } = state.current;
-        const raw = renderEffect(look.fx, layout, pal, fxTime.current, look.fxSpeed, look.fxSize);
+        const raw = renderEffect(look.fx, layout, pal, fxTime.current, look.fxSpeed, look.fxSize, state.current.angle);
         const screen = new Uint8Array(raw.length), drive = new Uint8Array(raw.length);
         for (let i = 0; i < raw.length; i++) {
           screen[i] = Math.round(raw[i] * look.brightness);

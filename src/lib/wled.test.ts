@@ -37,3 +37,20 @@ describe('WLED palette', () => {
     }
   });
 });
+
+describe('Palette (still)', () => {
+  it('runs first colour at the bottom to last at the top at 0°, and holds still at speed 0', () => {
+    const layout = buildLayout(DEFAULT_LED);
+    const pal = palette256([{ pos: 0, color: '#000000' }, { pos: 255, color: '#ffffff' }]);
+    const a = renderEffect('palette', layout, pal, 0, 0, 0.5, 0);
+    const b = renderEffect('palette', layout, pal, 5, 0, 0.5, 0);
+    expect(Array.from(a)).toEqual(Array.from(b));
+    const top = layout.leds.find((l) => l.row === 0)!, bottom = layout.leds.find((l) => l.row === layout.rows - 1)!;
+    expect(a[top.i * 3]).toBe(255);
+    expect(a[bottom.i * 3]).toBe(0);
+    const side = renderEffect('palette', layout, pal, 0, 0, 0.5, 90);
+    const left = layout.leds.find((l) => l.col === 0)!, right = layout.leds.find((l) => l.col === layout.cols - 1)!;
+    expect(side[left.i * 3]).toBe(0);
+    expect(side[right.i * 3]).toBe(255);
+  });
+});

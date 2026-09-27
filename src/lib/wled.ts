@@ -5,9 +5,10 @@ import { hexToRgb } from './color';
 import type { Gradient } from '../types';
 import type { LedLayout } from './led';
 
-export type WledEffect = 'colorwaves' | 'flow' | 'noise' | 'plasma' | 'aurora';
+export type WledEffect = 'palette' | 'colorwaves' | 'flow' | 'noise' | 'plasma' | 'aurora';
 
 export const WLED_EFFECTS: { id: WledEffect; label: string; note: string }[] = [
+  { id: 'palette', label: 'Palette (still)', note: 'Your colours laid across the frame in the same order and direction as your sky. Speed 0 keeps it still (WLED: “Palette” effect, speed 0); turn speed up to let it slowly scroll.' },
   { id: 'colorwaves', label: 'Colorwaves', note: 'Soft bands of colour rolling through, with a gentle pulse.' },
   { id: 'flow', label: 'Flow', note: 'The palette scrolls smoothly across the piece.' },
   { id: 'noise', label: 'Noise 2D', note: 'Slow drifting clouds of colour.' },
@@ -79,7 +80,7 @@ export function noise3(x: number, y: number, z: number) {
  * Colour every LED for one moment of a WLED effect. `speed` and `size` are 0..1, like WLED's
  * speed and intensity sliders. Returns RGB in data-line order, before brightness and gamma.
  */
-export function renderEffect(fx: WledEffect, layout: LedLayout, pal: Uint8Array, t: number, speed: number, size: number): Uint8Array {
+export function renderEffect(fx: WledEffect, layout: LedLayout, pal: Uint8Array, t: number, speed: number, size: number, angle = 0): Uint8Array {
   const out = new Uint8Array(layout.leds.length * 3);
   const span = Math.max(layout.cols, layout.rows, 2) - 1;
   const rate = 0.15 + speed * 1.6;
@@ -89,6 +90,15 @@ export function renderEffect(fx: WledEffect, layout: LedLayout, pal: Uint8Array,
     const u = l.col / span, v = l.row / span;
     let idx = 0, lum = 1;
     switch (fx) {
+      case 'palette': {
+        // Same direction as a CSS/Atmos linear gradient: 0° runs bottom to top.
+        const a = (angle * Math.PI) / 180;
+        const x = l.col / Math.max(1, layout.cols - 1) - 0.5, y = l.row / Math.max(1, layout.rows - 1) - 0.5;
+        const reach = Math.abs(Math.sin(a)) * 0.5 + Math.abs(Math.cos(a)) * 0.5 || 0.5;
+        const along = 0.5 + (x * Math.sin(a) - y * Math.cos(a)) / (2 * reach);
+        idx = speed > 0.01 ? frac(along + t * speed * 0.08) : Math.min(1, Math.max(0, along));
+        break;
+      }
       case 'colorwaves': {
         const scale = 0.6 + size * 2.4;
         idx = frac(v * scale * 0.5 + 0.06 * Math.sin(u * TAU + T * 0.7) - T * 0.12);
