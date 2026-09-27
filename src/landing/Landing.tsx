@@ -564,7 +564,7 @@ function HowItWorks() {
       body: 'A phone wallpaper, code for your site, a print, a film, or a light piece for your wall.',
       g: 'MOON RING',
       art: (
-        <span className="l-how-uses" aria-hidden style={{ '--how-bg': `url(${horizonSample})` } as React.CSSProperties}>
+        <span className="l-how-uses" aria-hidden>
           <span className="l-how-obj">
             <span className="l-how-phone">
               <Thumb g={sky} w={90} h={190} />
