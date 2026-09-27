@@ -25,11 +25,13 @@ Projects, favourites and settings are saved in the browser. The only server code
 4. **Authentication → URL Configuration**: set Site URL to your domain (e.g. `https://gradient-ui.vercel.app`) and add `https://gradient-ui.vercel.app/**` to Redirect URLs (used by the email sign-in link).
 5. **Project Settings → API**: copy the Project URL and the `anon` public key into Vercel as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, then redeploy.
 
+6. For share links and link previews, also run [`supabase/sharing.sql`](supabase/sharing.sql).
+
 The anon key is meant to be public; row level security in the schema lets anyone read the wall but only lets people add, like or delete their own posts. Without these variables the site hides sign-in and shows featured gradients on the wall.
 
 ## Routes
 
-`/` landing page (the Describe box repaints the hero with Claude) · `/studio` the app, signed-in only when Supabase is configured (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt)
+`/g/<code>` a shared gradient, shown full size on the landing page (served by `api/share.ts` so link cards show its preview image) · `/` landing page (the Describe box repaints the hero with Claude) · `/studio` the app, signed-in only when Supabase is configured (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt)
 
 ## What's in v0.3
 

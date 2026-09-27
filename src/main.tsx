@@ -32,7 +32,8 @@ function Root() {
   const session = useAuth((s) => s.session);
   const ready = useAuth((s) => s.ready);
   const studio = path.startsWith('/studio');
-  let page = <Landing />;
+  const share = /^\/g\/([A-Za-z0-9_-]{4,40})\/?$/.exec(path)?.[1];
+  let page = <Landing key={share ?? 'home'} slug={share} />;
   if (studio) {
     if (!accountsEnabled || session) page = <App />;
     else page = ready ? <StudioGate /> : <div className="gate-wait" />;

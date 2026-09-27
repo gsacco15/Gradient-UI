@@ -5,13 +5,14 @@ import { HorizonInspector, HorizonView } from './components/HorizonView';
 import { Inspector } from './components/Inspector';
 import { InterfaceInspector, InterfaceView } from './components/InterfaceView';
 import { Library } from './components/Library';
+import { ShareDialog } from './components/ShareDialog';
 import { StopBar } from './components/StopBar';
 import { PosterInspector, PosterView } from './components/PosterView';
 import { Thumb } from './components/Thumb';
 import { Welcome } from './components/Welcome';
 import { remix } from './lib/generate';
 import { gradientFromHash } from './lib/share';
-import { accountsEnabled, displayName, publish, requireAccount, signOut, useAuth } from './lib/supabase';
+import { accountsEnabled, displayName, requireAccount, signOut, useAuth } from './lib/supabase';
 import { linkTo, navigate } from './router';
 import { useStore, type View } from './store';
 
@@ -30,6 +31,7 @@ export default function App() {
   const remixOpen = useStore((s) => s.remixOpen);
   const toast = useStore((s) => s.toast);
   const welcomeOpen = useStore((s) => s.welcomeOpen);
+  const shareOpen = useStore((s) => s.shareOpen);
   const [compare, setCompare] = useState(false);
   const [pane, setPane] = useState<MobilePane>('canvas');
 
@@ -75,6 +77,7 @@ export default function App() {
       {exportOpen && <ExportDialog />}
       {remixOpen && <RemixDialog />}
       {welcomeOpen && <Welcome />}
+      {shareOpen && <ShareDialog />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
@@ -99,23 +102,10 @@ function useIncomingLinks() {
 }
 
 function ShareButton() {
-  const [busy, setBusy] = useState(false);
-  const share = () =>
-    requireAccount(async () => {
-      setBusy(true);
-      try {
-        await publish(useStore.getState().gradient);
-        useStore.getState().notify('SHARED TO THE COMMUNITY ✓');
-      } catch (e) {
-        useStore.getState().notify(`SHARE FAILED · ${(e as Error).message}`);
-      } finally {
-        setBusy(false);
-      }
-    });
   if (!accountsEnabled) return null;
   return (
-    <button onClick={share} disabled={busy} title="Post this gradient to the community wall">
-      {busy ? 'SHARING…' : 'SHARE'}
+    <button onClick={() => requireAccount(() => useStore.getState().set({ shareOpen: true }))} title="Get a link to this gradient, or post it to the community">
+      SHARE
     </button>
   );
 }

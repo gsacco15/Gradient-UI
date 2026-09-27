@@ -396,3 +396,12 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 9px; border-radius: 
 
 a.brand { color: inherit; text-decoration: none; }
 a.brand:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------------------------------------------------------------- share dialog */
+.modal.share { width: min(560px, calc(100% - 32px)); }
+.share-body { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+.share-preview { width: 100%; }
+.share .seg { flex-direction: column; align-items: flex-start; gap: 6px; }
+.share-link { display: flex; gap: 8px; align-items: stretch; }
+.share-link .text-input { flex: 1; font-size: 12px; }
+.share .row .btn { text-decoration: none; text-align: center; }

@@ -102,23 +102,39 @@ export async function signOut() {
 
 export interface SharedGradient {
   id: string;
+  slug: string;
   user_id: string;
   author: string;
   name: string;
   place: string;
   gradient: Gradient;
+  listed: boolean;
+  preview_path: string | null;
   created_at: string;
   likes: number;
 }
 
 export type Sort = 'new' | 'top';
 
+const hydrateRow = (r: Record<string, unknown>) => ({ ...r, gradient: hydrateGradient((r.gradient ?? {}) as Partial<Gradient>) }) as SharedGradient;
+
+/** The community wall: listed shares only. */
 export async function listCommunity(sort: Sort, limit = 24): Promise<SharedGradient[]> {
-  const q = need().from('community_gradients').select('*').limit(limit);
+  const q = need().from('community_gradients').select('*').eq('listed', true).limit(limit);
   const { data, error } = await (sort === 'top' ? q.order('likes', { ascending: false }).order('created_at', { ascending: false }) : q.order('created_at', { ascending: false }));
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => ({ ...r, gradient: hydrateGradient(r.gradient) })) as SharedGradient[];
+  return (data ?? []).map(hydrateRow);
 }
+
+/** One share by its link code (listed or link-only). */
+export async function getShared(slug: string): Promise<SharedGradient | null> {
+  const { data, error } = await need().from('community_gradients').select('*').eq('slug', slug).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? hydrateRow(data) : null;
+}
+
+export const shareUrl = (slug: string) => `${location.origin}/g/${slug}`;
+export const previewUrl = (path: string | null) => (path && url ? `${url}/storage/v1/object/public/previews/${path}` : null);
 
 export async function myLikes(): Promise<Set<string>> {
   const uid = useAuth.getState().session?.user.id;
@@ -133,17 +149,29 @@ export async function setLike(id: string, liked: boolean) {
   if (error && !/duplicate/i.test(error.message)) throw new Error(error.message);
 }
 
-export async function publish(g: Gradient): Promise<string> {
+/**
+ * Share a gradient. `listed` puts it on the community wall; otherwise it's link-only.
+ * The preview image (for link cards in messages and social posts) is optional: sharing
+ * still works if the upload fails.
+ */
+export async function publish(g: Gradient, opts: { listed: boolean; preview?: Blob | null }): Promise<SharedGradient> {
   const session = useAuth.getState().session;
   if (!session) throw new Error('Sign in to share.');
+  const db = need();
+  let preview_path: string | null = null;
+  if (opts.preview) {
+    const path = `${session.user.id}/${crypto.randomUUID()}.jpg`;
+    const { error } = await db.storage.from('previews').upload(path, opts.preview, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false });
+    if (!error) preview_path = path;
+  }
   const { id: _id, ...gradient } = g;
-  const { data, error } = await need()
+  const { data, error } = await db
     .from('shared_gradients')
-    .insert({ author: displayName(session).slice(0, 32), name: g.name.slice(0, 40) || 'UNTITLED', place: g.place.slice(0, 40), gradient })
-    .select('id')
+    .insert({ author: displayName(session).slice(0, 32), name: g.name.slice(0, 40) || 'UNTITLED', place: g.place.slice(0, 40), gradient, listed: opts.listed, preview_path })
+    .select('id, slug')
     .single();
-  if (error) throw new Error(error.message);
-  return data.id as string;
+  if (error) throw new Error(/column .*(slug|listed|preview_path)/i.test(error.message) ? 'Sharing needs a quick database update (supabase/sharing.sql).' : error.message);
+  return { id: data.id, slug: data.slug, user_id: session.user.id, author: displayName(session), name: g.name, place: g.place, gradient: g, listed: opts.listed, preview_path, created_at: new Date().toISOString(), likes: 0 };
 }
 
 export async function unpublish(id: string) {

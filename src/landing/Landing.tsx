@@ -7,7 +7,7 @@ import { luminance } from '../lib/color';
 import { cloneGradient } from '../lib/gradient';
 import { encodeGradient } from '../lib/share';
 import { generateFromText } from '../lib/textGradient';
-import { accountsEnabled, displayName, listCommunity, myLikes, requireAccount, setLike, signOut, useAuth, type SharedGradient, type Sort } from '../lib/supabase';
+import { accountsEnabled, displayName, getShared, listCommunity, myLikes, requireAccount, setLike, shareUrl, signOut, useAuth, type SharedGradient, type Sort } from '../lib/supabase';
 import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
@@ -35,9 +35,10 @@ export function openInStudio(g: Gradient) {
   navigate(`/studio#g=${encodeGradient(g)}`);
 }
 
-export default function Landing() {
+export default function Landing({ slug }: { slug?: string }) {
   const session = useAuth((s) => s.session);
   const sky = useHeroSky();
+  const shareState = useSharedSky(slug, sky);
   return (
     <div className="landing">
       <nav className="l-nav">
@@ -69,7 +70,7 @@ export default function Landing() {
         </div>
       </nav>
 
-      <Hero sky={sky} />
+      <Hero sky={sky} shareState={shareState} />
       <TryStrip sky={sky} />
       <Features />
       <Community />
@@ -126,8 +127,9 @@ function inkFor(g: Gradient): 'light' | 'dark' {
 interface HeroSky {
   g: Gradient;
   note: string | null; // what Claude said about the scene
-  source: 'preset' | 'ai' | 'local';
+  source: 'preset' | 'ai' | 'local' | 'shared';
   prompt?: string;
+  shared?: SharedGradient; // when opened from a share link
 }
 
 function useHeroSky() {
@@ -160,12 +162,38 @@ function useHeroSky() {
     }
   };
 
-  return { sky, busy, error, next, generate };
+  return { sky, setSky, busy, error, next, generate };
+}
+
+/** Load a share link (/g/<code>) into the hero, exactly as its creator made it. */
+function useSharedSky(slug: string | undefined, sky: ReturnType<typeof useHeroSky>) {
+  const [state, setState] = useState<'idle' | 'loading' | 'missing'>(slug ? 'loading' : 'idle');
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    setState('loading');
+    (accountsEnabled ? getShared(slug) : Promise.resolve(null))
+      .then((row) => {
+        if (!alive) return;
+        if (!row) return setState('missing');
+        sky.setSky({ g: row.gradient, note: null, source: 'shared', shared: row });
+        document.title = `${row.name} · Atmos`;
+        setState('idle');
+      })
+      .catch(() => alive && setState('missing'));
+    return () => {
+      alive = false;
+      document.title = 'Atmos Studio';
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+  return state;
 }
 
 type Sky = ReturnType<typeof useHeroSky>;
 
-function Hero({ sky: h }: { sky: Sky }) {
+function Hero({ sky: h, shareState }: { sky: Sky; shareState: 'idle' | 'loading' | 'missing' }) {
+  const shared = h.sky.source === 'shared' ? h.sky.shared : undefined;
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const g = h.sky.g;
@@ -189,27 +217,35 @@ function Hero({ sky: h }: { sky: Sky }) {
         <span>{g.coords}</span>
       </div>
       <div className="l-hero-body">
-        <p className="l-eyebrow">A gradient studio · every colour is a place and a moment</p>
-        <h1>
-          Gradients
-          <br />
-          drawn from the sky.
-        </h1>
-        <p className="l-lede">Describe a mood, shape it by hand, then drop it straight into your interface, a poster or a moving film.</p>
-        <div className="l-hero-actions">
-          <a className="l-pill light big" {...linkTo('/studio')}>
-            Start creating →
-          </a>
-          <button className="l-pill glass big" onClick={() => openInStudio(g)}>
-            Open this sky
-          </button>
-        </div>
+        {shared ? (
+          <SharedIntro shared={shared} g={g} />
+        ) : (
+          <>
+            <p className="l-eyebrow">
+              {shareState === 'loading' ? 'Opening a shared sky…' : shareState === 'missing' ? 'That share link has expired or was removed' : 'A gradient studio · every colour is a place and a moment'}
+            </p>
+            <h1>
+              Gradients
+              <br />
+              drawn from the sky.
+            </h1>
+            <p className="l-lede">Describe a mood, shape it by hand, then drop it straight into your interface, a poster or a moving film.</p>
+            <div className="l-hero-actions">
+              <a className="l-pill light big" {...linkTo('/studio')}>
+                Start creating →
+              </a>
+              <button className="l-pill glass big" onClick={() => openInStudio(g)}>
+                Open this sky
+              </button>
+            </div>
+          </>
+        )}
       </div>
       <div className="l-hero-foot">
         <span className="l-hero-caption">
           {h.busy ? (
             <span className="l-reading">READING THE SKY…</span>
-          ) : h.sky.source === 'preset' ? (
+          ) : h.sky.source === 'preset' || h.sky.source === 'shared' ? (
             `${g.name} · ${g.time}`
           ) : (
             <>
@@ -224,6 +260,64 @@ function Hero({ sky: h }: { sky: Sky }) {
         </button>
       </div>
     </header>
+  );
+}
+
+/** Hero copy for a shared gradient: who made it, its colours, and what you can do with it. */
+function SharedIntro({ shared, g }: { shared: SharedGradient; g: Gradient }) {
+  const session = useAuth((s) => s.session);
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(shared.likes);
+  useEffect(() => {
+    myLikes().then((set) => setLiked(set.has(shared.id)));
+  }, [session, shared.id]);
+  const like = () =>
+    requireAccount(async () => {
+      const on = !liked;
+      setLiked(on);
+      setLikes((n) => n + (on ? 1 : -1));
+      try {
+        await setLike(shared.id, on);
+      } catch {
+        setLiked(!on);
+        setLikes((n) => n + (on ? -1 : 1));
+      }
+    });
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string, what: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1400);
+    } catch {
+      /* clipboard blocked */
+    }
+  };
+  const stops = g.type === 'mesh' ? g.points : [...g.points].sort((a, b) => a.pos - b.pos);
+  return (
+    <>
+      <p className="l-eyebrow">Shared by {shared.author} · {g.place} · {g.time}</p>
+      <h1 className="l-shared-title">{shared.name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase())}</h1>
+      <div className="l-swatches">
+        {stops.map((p) => (
+          <button key={p.id} className="l-swatch" onClick={() => copy(p.color, p.color)} title={`Copy ${p.color}`}>
+            <span style={{ background: p.color }} />
+            {copied === p.color ? 'Copied' : p.color}
+          </button>
+        ))}
+      </div>
+      <div className="l-hero-actions">
+        <button className="l-pill light big" onClick={() => openInStudio(g)}>
+          Open in studio →
+        </button>
+        <button className="l-pill glass big" onClick={() => copy(shareUrl(shared.slug), 'link')}>
+          {copied === 'link' ? 'Link copied' : 'Copy link'}
+        </button>
+        <button className={`l-pill glass big l-like-hero ${liked ? 'on' : ''}`} onClick={like} aria-pressed={liked}>
+          {liked ? '♥' : '♡'} {likes}
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -353,7 +447,7 @@ function Community() {
       <div className="l-section-head row">
         <div>
           <h2>From the community.</h2>
-          <p>{accountsEnabled ? 'Gradients people made and shared. Open any of them in the studio to remix.' : 'Featured skies. Sharing opens when accounts are switched on.'}</p>
+          <p>{accountsEnabled ? 'Gradients people made and shared. Tap one to see it full size, then remix it in the studio.' : 'Featured skies. Sharing opens when accounts are switched on.'}</p>
         </div>
         {accountsEnabled && (
           <div className="l-sort" role="tablist">
@@ -373,9 +467,9 @@ function Community() {
         {accountsEnabled &&
           items?.map((it) => (
             <article key={it.id} className="l-card">
-              <button className="l-card-art" onClick={() => openInStudio(it.gradient)} aria-label={`Open ${it.name} in the studio`}>
+              <button className="l-card-art" onClick={() => navigate(`/g/${it.slug}`)} aria-label={`Open ${it.name}`}>
                 <Thumb g={it.gradient} w={300} h={360} />
-                <span className="l-card-open">Remix in studio →</span>
+                <span className="l-card-open">View →</span>
               </button>
               <div className="l-card-meta">
                 <div>
