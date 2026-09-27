@@ -12,6 +12,13 @@ import '../landing/landing.css';
 import './led.css';
 
 type View = 'diffused' | 'leds' | 'split';
+type Bezel = 'black' | 'white' | 'oak';
+
+const BEZELS: Record<Bezel, { face: string; edge: string }> = {
+  black: { face: '#070707', edge: 'rgba(255,255,255,0.06)' },
+  white: { face: '#f4f2ee', edge: 'rgba(0,0,0,0.18)' },
+  oak: { face: '#b98d5c', edge: 'rgba(0,0,0,0.25)' },
+};
 
 interface Look {
   view: View;
@@ -20,12 +27,13 @@ interface Look {
   gamma: number;
   room: 'dark' | 'light';
   wires: boolean;
+  bezel: Bezel;
   playing: boolean;
 }
 
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
-  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true }, source: 'studio' };
+  const fallback = { s: DEFAULT_LED, look: { view: 'diffused' as View, diffusion: 0.7, brightness: 0.8, gamma: 2.2, room: 'dark' as const, wires: false, playing: true, bezel: 'black' as Bezel }, source: 'studio' };
   try {
     const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null');
     return v ? { s: { ...fallback.s, ...v.s }, look: { ...fallback.look, ...v.look }, source: v.source ?? 'studio' } : fallback;
@@ -141,6 +149,7 @@ export default function LedLab() {
               <Num label="Width (in)" value={mmToIn(s.frameW)} onChange={(v) => set({ frameW: inToMm(v) })} min={3} max={96} />
               <Num label="Height (in)" value={mmToIn(s.frameH)} onChange={(v) => set({ frameH: inToMm(v) })} min={3} max={96} />
             </div>
+            <Seg value={look.bezel} onChange={(bezel) => setLook({ ...look, bezel })} options={[['black', 'Black frame'], ['white', 'White'], ['oak', 'Oak']]} />
             <Seg value={s.shape} onChange={(shape: LedShape) => set({ shape })} options={[['rect', s.frameW === s.frameH ? 'Square' : 'Rectangle'], ['circle', 'Circle'], ['oval', 'Oval']]} />
           </Group>
 
@@ -366,8 +375,17 @@ function draw(c: HTMLCanvasElement | null, grid: HTMLCanvasElement, st: { layout
 
   // Frame, following the shape.
   const outer = shapePath(-border);
-  ctx.fillStyle = dark ? '#050505' : '#1a1a1a';
+  const bezel = BEZELS[look.bezel] ?? BEZELS.black;
+  ctx.save();
+  ctx.shadowColor = dark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = border * k * 0.6;
+  ctx.shadowOffsetY = border * k * 0.15;
+  ctx.fillStyle = bezel.face;
   ctx.fill(outer);
+  ctx.restore();
+  ctx.strokeStyle = bezel.edge;
+  ctx.lineWidth = Math.max(1, dpr);
+  ctx.stroke(outer);
   const inner = shapePath(0);
   ctx.fillStyle = '#030303';
   ctx.fill(inner);
