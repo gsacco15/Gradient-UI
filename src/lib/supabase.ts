@@ -170,7 +170,7 @@ export async function publish(g: Gradient, opts: { listed: boolean; preview?: Bl
     .insert({ author: displayName(session).slice(0, 32), name: g.name.slice(0, 40) || 'UNTITLED', place: g.place.slice(0, 40), gradient, listed: opts.listed, preview_path })
     .select('id, slug')
     .single();
-  if (error) throw new Error(/column .*(slug|listed|preview_path)/i.test(error.message) ? 'Sharing needs a quick database update (supabase/sharing.sql).' : error.message);
+  if (error) throw new Error(/(slug|listed|preview_path)/i.test(error.message) && /column|schema cache/i.test(error.message) ? 'Sharing needs its one-time database update: run supabase/sharing.sql in the Supabase SQL Editor.' : error.message);
   return { id: data.id, slug: data.slug, user_id: session.user.id, author: displayName(session), name: g.name, place: g.place, gradient: g, listed: opts.listed, preview_path, created_at: new Date().toISOString(), likes: 0 };
 }
 

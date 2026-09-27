@@ -28,3 +28,6 @@ create policy "upload own previews" on storage.objects for insert to authenticat
 drop policy if exists "delete own previews" on storage.objects;
 create policy "delete own previews" on storage.objects for delete to authenticated
   using (bucket_id = 'previews' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Make the API see the new columns right away.
+notify pgrst, 'reload schema';
