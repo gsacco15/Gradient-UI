@@ -567,16 +567,43 @@ function HowItWorks() {
         <span className="l-how-uses" aria-hidden style={{ '--how-bg': `url(${horizonSample})` } as React.CSSProperties}>
           <span className="l-how-obj">
             <span className="l-how-phone">
-              <Thumb g={sky} w={90} h={180} />
+              <Thumb g={sky} w={90} h={190} />
+              <span className="l-how-island" />
+              <span className="l-how-lock">
+                <small>Sunday 21</small>
+                9:41
+              </span>
+              <span className="l-how-home" />
             </span>
             <em>Wallpaper</em>
+          </span>
+          <span className="l-how-obj">
+            <span className="l-how-web">
+              <span className="l-how-bar">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="l-how-page">
+                <span className="l-how-hero">
+                  <Thumb g={sky} w={120} h={50} />
+                </span>
+                <span className="l-how-line" />
+                <span className="l-how-line short" />
+                <span className="l-how-btn">
+                  <Thumb g={preset('ALPENGLOW')} w={60} h={16} />
+                </span>
+                <code>{'background: linear-gradient(…)'}</code>
+              </span>
+            </span>
+            <em>Web · CSS</em>
           </span>
           <span className="l-how-obj">
             <span className="l-how-poster">
               <img src={horizonSample} alt="" loading="lazy" />
               <u />
             </span>
-            <em>Poster · Film</em>
+            <em>Print · Film</em>
           </span>
           <span className="l-how-obj">
             <span className="l-how-oval">

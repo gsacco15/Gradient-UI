@@ -336,3 +336,41 @@
 /* Use it: the Horizon photo-film as a soft backdrop and as the print. */
 .l-how-uses { background: linear-gradient(rgba(14, 12, 20, 0.62), rgba(14, 12, 20, 0.72)), var(--how-bg, none) center / cover, #121017; }
 .l-how-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Use it objects, refined */
+.l-how-uses { gap: clamp(10px, 3.2%, 22px); }
+.l-how-obj { height: 156px; }
+.l-how-obj em { white-space: nowrap; }
+/* iPhone: titanium edge, Dynamic Island, lock-screen clock, home bar, glass sheen */
+.l-how-phone { position: relative; width: 62px; height: 128px; padding: 2.5px; border-radius: 15px; background: linear-gradient(145deg, #5b5862, #2a2830 40%, #4a4751); box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.25), 0 16px 28px -12px rgba(0, 0, 0, 0.9); overflow: visible; }
+.l-how-phone::before { content: ''; position: absolute; left: -1.5px; top: 30px; width: 1.5px; height: 14px; border-radius: 1px; background: #4a4751; box-shadow: 0 18px 0 #4a4751; }
+.l-how-phone::after { content: ''; position: absolute; right: -1.5px; top: 40px; width: 1.5px; height: 20px; border-radius: 1px; background: #4a4751; }
+.l-how-phone .thumb { border-radius: 12.5px; position: relative; }
+.l-how-island { position: absolute; left: 50%; top: 6px; width: 20px; height: 6px; margin-left: -10px; border-radius: 6px; background: #000; }
+.l-how-lock { position: absolute; left: 0; right: 0; top: 16px; display: flex; flex-direction: column; align-items: center; color: #fff; font-family: var(--l-display); font-weight: 600; font-size: 19px; line-height: 1; letter-spacing: -0.03em; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }
+.l-how-lock small { font-size: 5px; font-weight: 500; letter-spacing: 0; opacity: 0.85; margin-bottom: 2px; }
+.l-how-home { position: absolute; left: 50%; bottom: 6px; width: 22px; height: 2px; margin-left: -11px; border-radius: 2px; background: rgba(255, 255, 255, 0.85); }
+.l-how-phone .thumb::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(125deg, rgba(255, 255, 255, 0.16), transparent 38%); }
+/* Browser window with a gradient hero, a button and a line of CSS */
+.l-how-web { display: block; width: 104px; border-radius: 7px; overflow: hidden; background: #fbfaf7; box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.3), 0 16px 28px -12px rgba(0, 0, 0, 0.9); }
+.l-how-bar { display: flex; gap: 3px; padding: 5px 6px; background: #e8e5de; }
+.l-how-bar i { width: 4px; height: 4px; border-radius: 50%; background: #ff5f57; }
+.l-how-bar i:nth-child(2) { background: #febc2e; }
+.l-how-bar i:nth-child(3) { background: #28c840; }
+.l-how-page { display: flex; flex-direction: column; gap: 4px; padding: 5px; }
+.l-how-hero { display: block; height: 30px; border-radius: 3px; overflow: hidden; }
+.l-how-line { display: block; height: 3px; width: 80%; border-radius: 2px; background: #d9d5cc; }
+.l-how-line.short { width: 55%; }
+.l-how-btn { display: block; width: 40px; height: 9px; border-radius: 5px; overflow: hidden; margin-top: 1px; }
+.l-how-page code { font-family: var(--mono); font-size: 5.5px; line-height: 1.2; color: #6b4fa0; background: #efeaf6; padding: 2px 3px; border-radius: 2px; white-space: nowrap; overflow: hidden; }
+/* Framed print: black frame, white mat */
+.l-how-poster { width: 66px; height: 86px; padding: 5px; background: #f4f1ea; border: 2.5px solid #1b1a1d; box-shadow: 0 16px 28px -12px rgba(0, 0, 0, 0.9); }
+.l-how-poster img { height: calc(100% - 9px); }
+.l-how-poster u { left: 7px; bottom: 5px; width: 30%; height: 2px; }
+/* LED oval: light spilling onto the wall */
+.l-how-oval { width: 60px; height: 82px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 26px 2px rgba(242, 201, 168, 0.45), 0 0 60px 10px rgba(107, 79, 160, 0.35); }
+@media (max-width: 480px) {
+  .l-how-uses { gap: 9px; }
+  .l-how-web { width: 88px; }
+  .l-how-obj em { font-size: 8px; }
+}
