@@ -194,18 +194,9 @@
 }
 
 /* ---------------------------------------------------------------- shared viewer (/g/<code>) */
-.l-viewer { padding: 0; background: #0b0b10; }
-.l-viewer-stage { max-width: none; border-radius: 0; min-height: 100vh; min-height: 100svh; }
-.l-viewer-stage .l-hero-notes { font-family: var(--l-display); font-size: 15px; letter-spacing: -0.01em; opacity: 1; }
-.l-viewer-stage .l-hero-notes .l-pill { padding: 9px 16px; font-size: 14px; }
-.l-viewer-stage .l-logo span { color: inherit; opacity: 0.7; }
-.l-viewer-stage .l-hero-foot { padding-bottom: 22px; }
+.l-viewer { padding-bottom: 16px; }
 .l-viewer-wait { animation: breathe 2s ease-in-out infinite; }
-@media (max-width: 860px) {
-  .l-viewer-stage { border-radius: 0; min-height: 100svh; }
-  .l-viewer-stage .l-hero-notes { padding: 16px 18px; }
-  .l-viewer-stage .l-hero-body { padding-inline: 20px; }
-  .l-viewer-stage .l-hero-foot { padding: 18px 20px 24px; }
-  .l-viewer-stage .l-hero-actions { gap: 8px; }
-  .l-viewer-stage .l-hero-actions .l-pill.big { padding: 12px 14px; font-size: 14px; }
+@media (max-width: 480px) {
+  .l-viewer .l-hero-actions { gap: 8px; }
+  .l-viewer .l-hero-actions .l-pill.big { padding: 12px 14px; font-size: 14px; }
 }

@@ -40,39 +40,51 @@ export default function Landing({ slug }: { slug?: string }) {
   return <Home />;
 }
 
+/** Top bar. `bare` drops the in-page links, for pages without those sections. */
+function LandingNav({ bare = false }: { bare?: boolean }) {
+  const session = useAuth((s) => s.session);
+  return (
+    <nav className="l-nav">
+      <a className="l-logo" {...linkTo('/')}>
+        Atmos<span>[ studio ]</span>
+      </a>
+      <div className="l-links">
+        {!bare && (
+          <>
+            <a href="#features">Features</a>
+            <a href="#community">Community</a>
+          </>
+        )}
+      </div>
+      <div className="l-actions">
+        {session ? (
+          <>
+            <span className="l-hello">Hi, {displayName(session)}</span>
+            <button className="l-textbtn" onClick={() => signOut()}>
+              Sign out
+            </button>
+          </>
+        ) : (
+          accountsEnabled && (
+            <button className="l-textbtn" onClick={() => useAuth.getState().open('signin')}>
+              Sign in
+            </button>
+          )
+        )}
+        <a className="l-pill dark" {...linkTo('/studio')}>
+          Open studio
+        </a>
+      </div>
+    </nav>
+  );
+}
+
 function Home() {
   const session = useAuth((s) => s.session);
   const sky = useHeroSky();
   return (
     <div className="landing">
-      <nav className="l-nav">
-        <a className="l-logo" {...linkTo('/')}>
-          Atmos<span>[ studio ]</span>
-        </a>
-        <div className="l-links">
-          <a href="#features">Features</a>
-          <a href="#community">Community</a>
-        </div>
-        <div className="l-actions">
-          {session ? (
-            <>
-              <span className="l-hello">Hi, {displayName(session)}</span>
-              <button className="l-textbtn" onClick={() => signOut()}>
-                Sign out
-              </button>
-            </>
-          ) : (
-            accountsEnabled && (
-              <button className="l-textbtn" onClick={() => useAuth.getState().open('signin')}>
-                Sign in
-              </button>
-            )
-          )}
-          <a className="l-pill dark" {...linkTo('/studio')}>
-            Open studio
-          </a>
-        </div>
-      </nav>
+      <LandingNav />
 
       <Hero sky={sky} />
       <TryStrip sky={sky} />
@@ -259,15 +271,12 @@ function SharedViewer({ slug }: { slug: string }) {
   const wrap = useRef<HTMLDivElement>(null);
   return (
     <div className="landing l-viewer">
-      <div className={`l-hero l-viewer-stage ink-${ink}`} ref={wrap}>
+      <LandingNav bare />
+      <div className={`l-hero ink-${ink}`} ref={wrap}>
         {g ? <ViewerCanvas g={g} wrap={wrap} /> : <div className="l-hero-fallback l-viewer-wait" />}
-        <div className="l-hero-notes">
-          <a className="l-logo" {...linkTo('/')}>
-            Atmos<span>[ studio ]</span>
-          </a>
-          <a className="l-pill glass" {...linkTo('/')}>
-            Make your own
-          </a>
+        <div className="l-hero-notes" aria-hidden>
+          <span>{g?.place}</span>
+          <span>{g?.coords}</span>
         </div>
         <div className="l-hero-body">
           {shared && g ? (
@@ -287,12 +296,7 @@ function SharedViewer({ slug }: { slug: string }) {
           )}
         </div>
         <div className="l-hero-foot">
-          {g && (
-            <>
-              <span>{g.place}</span>
-              <span>{g.coords}</span>
-            </>
-          )}
+          <span className="l-hero-caption">{g && `${g.name} · ${g.time}`}</span>
         </div>
       </div>
     </div>
