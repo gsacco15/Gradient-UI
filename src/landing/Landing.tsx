@@ -36,9 +36,13 @@ export function openInStudio(g: Gradient) {
 }
 
 export default function Landing({ slug }: { slug?: string }) {
+  if (slug) return <SharedViewer slug={slug} />;
+  return <Home />;
+}
+
+function Home() {
   const session = useAuth((s) => s.session);
   const sky = useHeroSky();
-  const shareState = useSharedSky(slug, sky);
   return (
     <div className="landing">
       <nav className="l-nav">
@@ -70,7 +74,7 @@ export default function Landing({ slug }: { slug?: string }) {
         </div>
       </nav>
 
-      <Hero sky={sky} shareState={shareState} />
+      <Hero sky={sky} />
       <TryStrip sky={sky} />
       <Features />
       <Community />
@@ -127,9 +131,8 @@ function inkFor(g: Gradient): 'light' | 'dark' {
 interface HeroSky {
   g: Gradient;
   note: string | null; // what Claude said about the scene
-  source: 'preset' | 'ai' | 'local' | 'shared';
+  source: 'preset' | 'ai' | 'local';
   prompt?: string;
-  shared?: SharedGradient; // when opened from a share link
 }
 
 function useHeroSky() {
@@ -165,38 +168,12 @@ function useHeroSky() {
     }
   };
 
-  return { sky, setSky, busy, error, next, generate };
-}
-
-/** Load a share link (/g/<code>) into the hero, exactly as its creator made it. */
-function useSharedSky(slug: string | undefined, sky: ReturnType<typeof useHeroSky>) {
-  const [state, setState] = useState<'idle' | 'loading' | 'missing'>(slug ? 'loading' : 'idle');
-  useEffect(() => {
-    if (!slug) return;
-    let alive = true;
-    setState('loading');
-    (accountsEnabled ? getShared(slug) : Promise.resolve(null))
-      .then((row) => {
-        if (!alive) return;
-        if (!row) return setState('missing');
-        sky.setSky({ g: row.gradient, note: null, source: 'shared', shared: row });
-        document.title = `${row.name} · Atmos`;
-        setState('idle');
-      })
-      .catch(() => alive && setState('missing'));
-    return () => {
-      alive = false;
-      document.title = 'Atmos Studio';
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
-  return state;
+  return { sky, busy, error, next, generate };
 }
 
 type Sky = ReturnType<typeof useHeroSky>;
 
-function Hero({ sky: h, shareState }: { sky: Sky; shareState: 'idle' | 'loading' | 'missing' }) {
-  const shared = h.sky.source === 'shared' ? h.sky.shared : undefined;
+function Hero({ sky: h }: { sky: Sky }) {
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const g = h.sky.g;
@@ -220,13 +197,7 @@ function Hero({ sky: h, shareState }: { sky: Sky; shareState: 'idle' | 'loading'
         <span>{g.coords}</span>
       </div>
       <div className="l-hero-body">
-        {shared ? (
-          <SharedIntro shared={shared} g={g} />
-        ) : (
-          <>
-            <p className="l-eyebrow">
-              {shareState === 'loading' ? 'Opening a shared sky…' : shareState === 'missing' ? 'That share link has expired or was removed' : 'A gradient studio · every colour is a place and a moment'}
-            </p>
+        <p className="l-eyebrow">A gradient studio · every colour is a place and a moment</p>
             <h1>
               Gradients
               <br />
@@ -241,14 +212,12 @@ function Hero({ sky: h, shareState }: { sky: Sky; shareState: 'idle' | 'loading'
                 Open this sky
               </button>
             </div>
-          </>
-        )}
       </div>
       <div className="l-hero-foot">
         <span className="l-hero-caption">
           {h.busy ? (
             <span className="l-reading">READING THE SKY…</span>
-          ) : h.sky.source === 'preset' || h.sky.source === 'shared' ? (
+          ) : h.sky.source === 'preset' ? (
             `${g.name} · ${g.time}`
           ) : (
             <>
@@ -266,7 +235,89 @@ function Hero({ sky: h, shareState }: { sky: Sky; shareState: 'idle' | 'loading'
   );
 }
 
-/** Hero copy for a shared gradient: who made it, its colours, and what you can do with it. */
+/** A share link (/g/<code>) on its own: the gradient exactly as its creator made it, full screen. */
+function SharedViewer({ slug }: { slug: string }) {
+  const [shared, setShared] = useState<SharedGradient | null>(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (accountsEnabled ? getShared(slug) : Promise.resolve(null))
+      .then((row) => {
+        if (!alive) return;
+        if (!row) return setMissing(true);
+        setShared(row);
+        document.title = `${row.name} · Atmos`;
+      })
+      .catch(() => alive && setMissing(true));
+    return () => {
+      alive = false;
+      document.title = 'Atmos Studio';
+    };
+  }, [slug]);
+  const g = shared?.gradient;
+  const ink = useMemo(() => (g ? inkFor(g) : 'light'), [g]);
+  const wrap = useRef<HTMLDivElement>(null);
+  return (
+    <div className="landing l-viewer">
+      <div className={`l-hero l-viewer-stage ink-${ink}`} ref={wrap}>
+        {g ? <ViewerCanvas g={g} wrap={wrap} /> : <div className="l-hero-fallback l-viewer-wait" />}
+        <div className="l-hero-notes">
+          <a className="l-logo" {...linkTo('/')}>
+            Atmos<span>[ studio ]</span>
+          </a>
+          <a className="l-pill glass" {...linkTo('/')}>
+            Make your own
+          </a>
+        </div>
+        <div className="l-hero-body">
+          {shared && g ? (
+            <SharedIntro shared={shared} g={g} />
+          ) : missing ? (
+            <>
+              <p className="l-eyebrow">That share link has expired or was removed</p>
+              <h1 className="l-shared-title">Nothing here.</h1>
+              <div className="l-hero-actions">
+                <a className="l-pill light big" {...linkTo('/')}>
+                  Go to Atmos →
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="l-eyebrow l-reading">Opening a shared sky…</p>
+          )}
+        </div>
+        <div className="l-hero-foot">
+          {g && (
+            <>
+              <span>{g.place}</span>
+              <span>{g.coords}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ViewerCanvas({ g, wrap }: { g: Gradient; wrap: React.RefObject<HTMLDivElement | null> }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const pointer = usePointer(wrap);
+  const still = useMemo(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false, []);
+  const { error } = useRenderLoop(
+    canvas,
+    (r, t) => r.render(g, { phase: still ? 0 : ((t / 1000) / g.motion.duration) % 1, pxScale: grainScale(r.canvas.width, r.canvas.height), seed: 0, mouse: pointer.step() }),
+    [g],
+    !still,
+  );
+  return (
+    <>
+      <canvas ref={canvas} className="l-hero-canvas" aria-hidden />
+      {error && <div className="l-hero-fallback" />}
+    </>
+  );
+}
+
+/** Who made it, its colours, and what you can do with it. */
 function SharedIntro({ shared, g }: { shared: SharedGradient; g: Gradient }) {
   const session = useAuth((s) => s.session);
   const [liked, setLiked] = useState(false);
