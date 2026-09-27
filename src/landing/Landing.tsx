@@ -133,14 +133,7 @@ function Home() {
         </div>
       </section>
 
-      <footer className="l-foot">
-        <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
-        <span className="l-foot-links">
-          <a {...linkTo('/community')}>COMMUNITY</a>
-          <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
-        </span>
-        <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -797,14 +790,88 @@ export function CommunityPage() {
     <div className="landing">
       <LandingNav />
       <CommunityWall full />
-      <footer className="l-foot">
-        <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
-        <span className="l-foot-links">
-          <a {...linkTo('/')}>HOME</a>
-          <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
-        </span>
-        <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
-      </footer>
+      <SiteFooter />
+    </div>
+  );
+}
+
+/** The footer on every public page. */
+export function SiteFooter() {
+  return (
+    <footer className="l-foot">
+      <span>ATMOS [ STUDIO ] · SKY & NATURE GRADIENTS</span>
+      <span className="l-foot-links">
+        <a {...linkTo('/community')}>COMMUNITY</a>
+        <a {...linkTo('/led')}>ATMOS [ LAB ]</a>
+        <a {...linkTo('/privacy')}>PRIVACY</a>
+      </span>
+      <span>MADE WITH WEBGL, OKLAB AND CLAUDE</span>
+    </footer>
+  );
+}
+
+/** Any address we don't know: a quiet sky and a way back. */
+export function NotFoundPage() {
+  useEffect(() => {
+    document.title = 'Not found · Atmos';
+    return () => {
+      document.title = 'Atmos — gradients drawn from the sky';
+    };
+  }, []);
+  return (
+    <div className="landing">
+      <LandingNav />
+      <section className="l-404">
+        <Thumb g={preset('MOON RING')} w={1200} h={700} className="l-404-art" priority />
+        <div className="l-404-body">
+          <p className="l-eyebrow">404 · Somewhere past the horizon</p>
+          <h1>This sky drifted off.</h1>
+          <p>The page you’re looking for isn’t here. It may have moved, or the link was mistyped.</p>
+          <div className="l-hero-actions">
+            <a className="l-pill light big" {...linkTo('/')}>
+              Back home →
+            </a>
+            <a className="l-pill glass big" {...linkTo('/community')}>
+              Browse the community
+            </a>
+          </div>
+        </div>
+      </section>
+      <SiteFooter />
+    </div>
+  );
+}
+
+/** A plain-language privacy note. */
+export function PrivacyPage() {
+  useEffect(() => {
+    document.title = 'Privacy · Atmos';
+    return () => {
+      document.title = 'Atmos — gradients drawn from the sky';
+    };
+  }, []);
+  return (
+    <div className="landing">
+      <LandingNav />
+      <article className="l-doc">
+        <p className="l-eyebrow">Privacy</p>
+        <h1>What Atmos keeps, and why.</h1>
+        <p className="l-doc-lede">Short version: only what’s needed to run your account and the community. No ads, no selling data, no tracking cookies.</p>
+        <h2>Your account</h2>
+        <p>When you sign up we store your email address, your display name and a securely hashed password with our database provider, Supabase. We use your email only to sign you in and to send account emails like password resets.</p>
+        <h2>What you share</h2>
+        <p>Gradients you share, their preview images and your likes are stored so they can appear on your share link and, if you choose, on the community page. Link-only shares aren’t listed publicly, but anyone with the link can open them.</p>
+        <h2>Describing a sky</h2>
+        <p>When you use “Describe a sky”, the text you type is sent to Anthropic’s Claude to create the gradient. We don’t store what you type.</p>
+        <h2>On your device</h2>
+        <p>Your current sky, saved projects, Lab settings and uploaded photos stay in your browser’s own storage. They aren’t uploaded unless you share something.</p>
+        <h2>Analytics</h2>
+        <p>We use Vercel Web Analytics to count page visits. It uses no cookies and doesn’t identify you personally.</p>
+        <h2>Your choices</h2>
+        <p>You can delete anything you’ve shared, and you can ask us to delete your account and everything linked to it at any time.</p>
+        <p className="l-doc-date">Last updated {new Date(2026, 8, 27).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </article>
+      <SiteFooter />
     </div>
   );
 }

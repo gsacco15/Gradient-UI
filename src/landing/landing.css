@@ -399,3 +399,17 @@
 .l-how-poster u { left: 6px; bottom: 5px; width: 26%; height: 1.5px; opacity: 0.35; }
 .l-how-oval { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 0 18px 1px rgba(242, 201, 168, 0.4), 0 16px 28px -14px rgba(40, 30, 20, 0.35); }
 .auth-link.subtle { font-size: 12.5px; color: #8a877f; padding-top: 0; }
+
+/* ---------------------------------------------------------------- 404 + privacy */
+.l-404 { position: relative; max-width: 1280px; margin: 0 auto; min-height: min(70vh, 640px); min-height: min(70svh, 640px); border-radius: 32px; overflow: hidden; display: flex; align-items: flex-end; color: #fff; background: #0b1026; isolation: isolate; }
+.l-404-art { position: absolute; inset: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: -1; aspect-ratio: auto !important; }
+.l-404-body { padding: clamp(28px, 5vw, 64px); max-width: 720px; }
+.l-404 h1 { font-size: clamp(40px, 7vw, 88px); line-height: 0.95; letter-spacing: -0.05em; font-weight: 650; }
+.l-404 p:not(.l-eyebrow) { font-size: 18px; line-height: 1.5; opacity: 0.85; margin: 18px 0 28px; }
+.l-doc { max-width: 680px; margin: 40px auto 0; padding: 0 8px; }
+.l-doc h1 { font-size: clamp(36px, 5vw, 56px); line-height: 1; letter-spacing: -0.045em; font-weight: 650; margin-bottom: 18px; }
+.l-doc .l-eyebrow { color: var(--l-sub); opacity: 1; }
+.l-doc h2 { font-size: 20px; letter-spacing: -0.02em; margin: 34px 0 8px; }
+.l-doc p { color: #3a3935; font-size: 16.5px; line-height: 1.65; margin: 0; }
+.l-doc .l-doc-lede { font-size: 19px; color: var(--l-ink); }
+.l-doc .l-doc-date { margin-top: 36px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--l-sub); }

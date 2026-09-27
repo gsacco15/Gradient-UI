@@ -2,7 +2,8 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { createRoot } from 'react-dom/client';
 import { AuthDialog } from './components/AuthDialog';
-import Landing, { CommunityPage } from './landing/Landing';
+import Landing, { CommunityPage, NotFoundPage, PrivacyPage } from './landing/Landing';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // The studio and the Lab load their own code only when opened, so the home page stays light.
 const App = lazy(() => import('./App'));
@@ -40,13 +41,18 @@ function Root() {
   let page = <Landing key={share ?? 'home'} slug={share} />;
   if (/^\/led\/?$/.test(path)) page = <LedLab />;
   if (/^\/community\/?$/.test(path)) page = <CommunityPage />;
+  if (/^\/privacy\/?$/.test(path)) page = <PrivacyPage />;
+  const known = path === '/' || studio || !!share || /^\/(led|community|privacy)\/?$/.test(path);
+  if (!known) page = <NotFoundPage />;
   if (studio) {
     if (!accountsEnabled || session) page = <App />;
     else page = ready ? <StudioGate /> : <div className="gate-wait" />;
   }
   return (
     <>
-      <Suspense fallback={<div className="gate-wait" />}>{page}</Suspense>
+      <ErrorBoundary key={path}>
+        <Suspense fallback={<div className="gate-wait" />}>{page}</Suspense>
+      </ErrorBoundary>
       <AuthDialog />
       <Analytics />
     </>
