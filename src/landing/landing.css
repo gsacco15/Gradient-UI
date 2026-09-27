@@ -262,17 +262,11 @@
 .l-how-n { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--l-sub); }
 .l-how-steps h3 { font-size: 26px; letter-spacing: -0.035em; font-weight: 650; }
 .l-how-steps p { margin: 0; color: var(--l-sub); font-size: 16px; line-height: 1.5; max-width: 28em; }
-.l-how-prompt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; background: rgba(255, 255, 255, 0.92); color: #111; font-size: 14px; padding: 10px 16px; border-radius: 999px; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.4); }
-.l-how-prompt::after { content: ''; display: inline-block; width: 1.5px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #111; animation: caret 1s steps(1) infinite; }
-@keyframes caret { 50% { opacity: 0; } }
 .l-how-dots i { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
-.l-how-uses { position: absolute; inset: auto 14px 14px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.l-how-uses b { font-family: var(--mono); font-weight: 400; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; padding: 5px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 @media (max-width: 860px) {
   .l-how { padding-top: 80px; }
   .l-how-steps { grid-template-columns: 1fr; gap: 36px; }
 }
-@media (prefers-reduced-motion: reduce) { .l-how-prompt::after { animation: none; } }
 
 /* ---------------------------------------------------------------- community page + footer links */
 .l-community.full { padding-top: 40px; }
@@ -308,3 +302,34 @@
   .l-hero-ask .l-ask .l-pill { width: auto; padding: 10px 14px; font-size: 14px; }
   .l-hero .l-lede { font-size: 16px; }
 }
+
+/* How it works: little pieces of the real app */
+.l-how-ask { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(86%, 380px); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.l-how-field { width: 100%; display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 16px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.45); }
+.l-how-typed { flex: 1; min-width: 0; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; }
+.l-how-typed::after { content: ''; display: inline-block; width: 1.5px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #fff; animation: caret 1s steps(1) infinite; }
+.l-how-field b { flex: none; font-size: 12.5px; font-weight: 600; color: #111; background: #fff; padding: 7px 12px; border-radius: 999px; }
+.l-how-by { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.85); }
+.l-how-by i { width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff; }
+@keyframes caret { 50% { opacity: 0; } }
+
+.l-how-panel { position: absolute; right: 14px; top: 14px; bottom: 14px; width: 44%; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.4); }
+.l-how-slider { display: flex; flex-direction: column; gap: 6px; }
+.l-how-slider em { font-style: normal; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; color: #6d6b66; }
+.l-how-slider > span { position: relative; height: 3px; border-radius: 3px; background: rgba(17, 17, 17, 0.12); }
+.l-how-slider > span > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: #111; }
+.l-how-slider > span > i { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; border: 1.5px solid #111; }
+
+.l-how-uses { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: clamp(14px, 4%, 26px); background: #121017; }
+.l-how-obj { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.l-how-obj em { font-style: normal; font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.l-how-obj .thumb { width: 100%; height: 100%; background-size: cover; background-position: center; }
+.l-how-phone { display: block; width: 58px; height: 116px; padding: 3px; border-radius: 14px; background: #2a2730; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 12px 24px -10px rgba(0, 0, 0, 0.8); overflow: hidden; }
+.l-how-phone .thumb { border-radius: 11px; }
+.l-how-poster { position: relative; display: block; width: 70px; height: 92px; padding: 6px 6px 16px; background: #f4f1ea; box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.8); }
+.l-how-poster u { position: absolute; left: 6px; bottom: 6px; width: 40%; height: 3px; background: #111; opacity: 0.6; text-decoration: none; }
+.l-how-oval { display: block; width: 66px; height: 88px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 30px -4px rgba(242, 201, 168, 0.55); }
+@media (prefers-reduced-motion: reduce) { .l-how-typed::after { animation: none; } }
+.l-how-obj { height: 150px; justify-content: flex-end; }
+.l-how-obj > span { margin-bottom: auto; margin-top: auto; }
+.l-how-uses { align-items: center; }

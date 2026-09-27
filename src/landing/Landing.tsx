@@ -508,13 +508,24 @@ function SharedIntro({ shared, g }: { shared: SharedGradient; g: Gradient }) {
 
 /** How it works: three quiet steps, each with a small live picture. */
 function HowItWorks() {
+  const sky = preset('SKYSPACE'), dawn = preset('ALPENGLOW');
   const steps: { n: string; title: string; body: string; g: string; art: React.ReactNode }[] = [
     {
       n: '01',
       title: 'Describe',
       body: 'Name a place, a mood or a moment. Claude chooses the colours, the place and the hour.',
       g: 'GLACIER HOUR',
-      art: <span className="l-how-prompt">Iceland glacier at first light</span>,
+      art: (
+        <span className="l-how-ask" aria-hidden>
+          <span className="l-how-field">
+            <span className="l-how-typed">Iceland glacier at first light</span>
+            <b>Paint it →</b>
+          </span>
+          <span className="l-how-by">
+            <i /> BY CLAUDE · ICELAND FJORD · 05:12
+          </span>
+        </span>
+      ),
     },
     {
       n: '02',
@@ -522,24 +533,56 @@ function HowItWorks() {
       body: 'Move the colours, add fog and grain, let it breathe or follow your cursor.',
       g: 'ALPENGLOW',
       art: (
-        <span className="l-how-dots" aria-hidden>
-          <i style={{ left: '22%', top: '30%' }} />
-          <i style={{ left: '64%', top: '24%' }} />
-          <i style={{ left: '46%', top: '62%' }} />
-          <i style={{ left: '78%', top: '70%' }} />
-        </span>
+        <>
+          <span className="l-how-dots" aria-hidden>
+            <i style={{ left: '14%', top: '26%' }} />
+            <i style={{ left: '40%', top: '20%' }} />
+            <i style={{ left: '26%', top: '70%' }} />
+          </span>
+          <span className="l-how-panel" aria-hidden>
+            {[
+              ['FOG', 62],
+              ['GRAIN', 34],
+              ['MOTION', 78],
+            ].map(([k, v]) => (
+              <span key={k} className="l-how-slider">
+                <em>{k}</em>
+                <span>
+                  <span style={{ width: `${v}%` }} />
+                  <i style={{ left: `${v}%` }} />
+                </span>
+              </span>
+            ))}
+          </span>
+        </>
       ),
     },
     {
       n: '03',
       title: 'Use it',
       body: 'A phone wallpaper, code for your site, a print, a film, or a light piece for your wall.',
-      g: 'SKYSPACE',
+      g: 'MOON RING',
       art: (
         <span className="l-how-uses" aria-hidden>
-          {['Wallpaper', 'CSS', 'Poster', 'Film', 'LED'].map((u) => (
-            <b key={u}>{u}</b>
-          ))}
+          <span className="l-how-obj">
+            <span className="l-how-phone">
+              <Thumb g={sky} w={90} h={180} />
+            </span>
+            <em>Wallpaper</em>
+          </span>
+          <span className="l-how-obj">
+            <span className="l-how-poster">
+              <Thumb g={dawn} w={110} h={140} />
+              <u />
+            </span>
+            <em>Poster</em>
+          </span>
+          <span className="l-how-obj">
+            <span className="l-how-oval">
+              <Thumb g={sky} w={110} h={140} />
+            </span>
+            <em>LED light</em>
+          </span>
         </span>
       ),
     },
