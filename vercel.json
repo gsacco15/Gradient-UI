@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/led",
-      "destination": "/api/share?page=lab"
+      "destination": "/led.html"
     },
     {
       "source": "/g/:slug",
