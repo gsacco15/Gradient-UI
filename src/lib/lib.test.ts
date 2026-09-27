@@ -206,3 +206,63 @@ describe('AI light-work types', () => {
     expect(sanitizeAi({ ...base, type: 'halo' })!.size).toBe(0.62); // missing -> default
   });
 });
+
+describe('AI controls everything', () => {
+  it('carries every editor control from the answer into the gradient', async () => {
+    const { sanitizeAi } = await import('./aiSchema');
+    const { fromAi } = await import('./textGradient');
+    const a = sanitizeAi({
+      name: 'chapel', place: 'provence', time: '07:20', coords: '', type: 'aperture', angle: 180,
+      colors: ['#E9E2D6', '#F6B47A', '#FFF1DC'], points: [], background: '#111111', symmetry: 'mirror', slices: 8, rotation: 12,
+      centerX: 0.5, centerY: 0.45, shape: 'arch', ratio: 0.6, softness: 0.3, size: 0.7, glow: 0.5, bands: 3,
+      motion: 'pulse', speed: 0.3, duration: 16, interact: 'lens', interactStrength: 0.4,
+      fog: 0.2, haze: 0.2, frost: 0, clouds: 0, heat: 0, dusk: 0.3, pixel: 0, note: 'x',
+    })!;
+    const g = fromAi(a);
+    expect(g.composition).toMatchObject({ shape: 'arch', ratio: 0.6, softness: 0.3, size: 0.7, glow: 0.5, rotation: 12, symmetry: 'none' });
+    expect(g.center).toEqual({ x: 0.5, y: 0.45 });
+    expect(g.motion).toEqual({ mode: 'pulse', speed: 0.3, duration: 16 });
+    expect(g.interact).toEqual({ mode: 'lens', strength: 0.4 });
+    expect(g.weather.dusk).toBe(0.3);
+    expect(g.background).toBe('#111111');
+  });
+
+  it('places mesh blobs and ramp stops where Claude put them, clamped and in order', async () => {
+    const { sanitizeAi } = await import('./aiSchema');
+    const { fromAi } = await import('./textGradient');
+    const a = sanitizeAi({
+      name: 'm', place: 'p', time: '01:00', coords: '', type: 'mesh', angle: 180, colors: ['#000000', '#FF0000', '#00FF00'],
+      points: [{ pos: 0, x: 0.1, y: 0.2, size: 0.3 }, { pos: 0.8, x: 2, y: 0.5, size: 9 }, { pos: 0.4, x: 0.9, y: 0.9, size: 0.2 }],
+      background: 'nope', symmetry: 'none', motion: 'none', fog: 0, haze: 0, frost: 0, clouds: 0, heat: 0, dusk: 0, note: '',
+    })!;
+    const g = fromAi(a);
+    expect(g.points[1]).toMatchObject({ x: 1, size: 1 });
+    expect(g.points[2].pos).toBeGreaterThanOrEqual(g.points[1].pos); // stops stay in order
+    expect(g.background).toBe('#00FF00'); // bad hex -> last colour
+    expect(g.composition.ratio).toBe(1); // missing -> default
+  });
+});
+
+describe('describeControls', () => {
+  it('reads out the controls in play', async () => {
+    const { describeControls } = await import('./textGradient');
+    const g = makeGradient({ name: 'x', place: 'y', time: '12:00', type: 'aperture', colors: ['#000000', '#FFFFFF'], composition: { shape: 'arch', ratio: 0.5, glow: 0.4 }, weather: { fog: 0.3, haze: 0 }, motion: { mode: 'pulse', duration: 16 } });
+    expect(describeControls(g)).toEqual(['APERTURE', 'ARCH', 'TALL 2.0×', 'GLOW 40', 'FOG 30', 'PULSE 16S']);
+  });
+});
+
+describe('built-in generator reads art words and shapes', () => {
+  it('a tall arched Turrell window at dusk is a tall arched aperture, dark wall first', async () => {
+    const { localTextGradient } = await import('./textGradient');
+    const g = localTextGradient('Tall arched Turrell window at dusk').gradient;
+    expect(g.type).toBe('aperture');
+    expect(g.composition.shape).toBe('arch');
+    expect(g.composition.ratio).toBe(0.6);
+    expect(hexToOklab(g.points[0].color)[0]).toBeLessThan(hexToOklab(g.points[g.points.length - 1].color)[0]);
+  });
+  it('an eclipse is a halo and a Rothko horizon is bands', async () => {
+    const { localTextGradient } = await import('./textGradient');
+    expect(localTextGradient('Total eclipse over the Atacama').gradient.type).toBe('halo');
+    expect(localTextGradient('Rothko sea horizon').gradient.type).toBe('bands');
+  });
+});

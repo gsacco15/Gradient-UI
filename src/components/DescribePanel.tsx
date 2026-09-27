@@ -1,11 +1,11 @@
 // Experimental: describe a scene or mood in words, get a gradient.
 import { useEffect, useRef, useState } from 'react';
 import { MAX_PROMPT } from '../lib/aiSchema';
-import { generateFromText, type TextResult } from '../lib/textGradient';
+import { describeControls, generateFromText, type TextResult } from '../lib/textGradient';
 import { useStore } from '../store';
 import { Thumb } from './Thumb';
 
-const EXAMPLES = ['Tokyo rain at 2am', 'Iceland glacier at first light', '80s Miami sunset', 'Moss after a storm', 'Lavender field, heat haze', 'Deep sea bioluminescence'];
+const EXAMPLES = ['Tokyo rain at 2am', 'Iceland glacier at first light', 'Tall arched Turrell window at dusk', 'Total eclipse over the Atacama', 'Rothko sea horizon', 'Deep sea bioluminescence'];
 
 export function DescribePanel() {
   const [prompt, setPrompt] = useState('');
@@ -102,6 +102,7 @@ export function DescribePanel() {
             <span className="muted">{latest.source === 'ai' ? 'BY CLAUDE' : 'BUILT-IN'}</span>
           </div>
           {latest.note && <p className="collection-blurb">{latest.note}</p>}
+          <p className="describe-controls" title="The controls this gradient uses. Change any of them in Edit.">{describeControls(latest.gradient).join(' · ')}</p>
           {latest.notice && <p className="hint warn">{latest.notice}</p>}
           <button className="btn ghost wide" disabled={busy} onClick={() => run(latest.prompt)}>
             TRY AGAIN

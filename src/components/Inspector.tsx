@@ -268,12 +268,12 @@ function ProportionSlider({ g, update }: { g: Gradient; update: (fn: (d: Gradien
   const fmt = (x: number) => {
     if (Math.abs(x) < 0.02) return '1:1';
     const k = 2 ** Math.abs(x);
-    return x > 0 ? `TALL ${k.toFixed(1)}×` : `WIDE ${k.toFixed(1)}×`;
+    return x > 0 ? `↕ ${k.toFixed(1)}` : `↔ ${k.toFixed(1)}`;
   };
   return (
     <Slider
       label="PROPORTION"
-      hint="1:1 is a true circle or square everywhere. Slide right for taller, left for wider."
+      hint="1:1 is a true circle or square everywhere. Slide right for taller (↕), left for wider (↔)."
       value={v}
       min={-1.5}
       max={1.5}

@@ -14,7 +14,8 @@ export interface TextResult {
 }
 
 export function fromAi(a: AiGradient): Gradient {
-  return makeGradient({
+  const single = a.type === 'aperture' || a.type === 'halo';
+  const g = makeGradient({
     name: a.name,
     place: a.place,
     time: a.time,
@@ -22,11 +23,54 @@ export function fromAi(a: AiGradient): Gradient {
     type: a.type,
     angle: a.angle,
     colors: a.colors,
-    background: a.colors[a.colors.length - 1],
-    composition: { symmetry: a.type === 'aperture' || a.type === 'halo' ? 'none' : a.symmetry, count: a.bands ?? 3, softness: a.type === 'aperture' ? 0.6 : a.type === 'halo' ? 0.35 : 0.85, size: a.size ?? 0.62, glow: a.glow ?? 0.45 },
-    weather: { fog: a.fog, haze: a.haze, frost: a.frost, clouds: a.clouds, heat: a.heat, dusk: a.dusk },
-    motion: { mode: a.motion, speed: 0.5, duration: 10 },
+    background: a.background ?? a.colors[a.colors.length - 1],
+    center: { x: a.centerX ?? 0.5, y: a.centerY ?? 0.5 },
+    composition: {
+      symmetry: single ? 'none' : a.symmetry,
+      slices: a.slices ?? 6,
+      shape: a.shape ?? 'square',
+      count: a.bands ?? 3,
+      softness: a.softness ?? (a.type === 'aperture' ? 0.6 : a.type === 'halo' ? 0.35 : 0.85),
+      rotation: a.rotation ?? 0,
+      size: a.size ?? 0.62,
+      glow: a.glow ?? 0.45,
+      ratio: a.ratio ?? 1,
+    },
+    weather: { fog: a.fog, haze: a.haze, frost: a.frost, clouds: a.clouds, heat: a.heat, dusk: a.dusk, pixel: a.pixel ?? 0 },
+    motion: { mode: a.motion, speed: a.speed ?? 0.5, duration: a.duration ?? 10 },
+    interact: { mode: a.interact ?? 'none', strength: a.interactStrength ?? 0.6 },
   });
+  // Claude's own placement, when it gave one per colour: ramp stops kept in order, mesh blobs where it put them.
+  if (a.points?.length === g.points.length) {
+    let last = 0;
+    g.points.forEach((p, i) => {
+      const q = a.points[i];
+      p.pos = i === 0 ? Math.min(q.pos, 1) : Math.max(last, q.pos);
+      last = p.pos;
+      p.x = q.x;
+      p.y = q.y;
+      p.size = q.size;
+    });
+  }
+  return g;
+}
+
+/** A short read-out of the controls a generated gradient uses, so you can see how the prompt was read. */
+export function describeControls(g: Gradient): string[] {
+  const c = g.composition, out: string[] = [g.type.toUpperCase()];
+  if (g.type === 'linear' || g.type === 'bands') out.push(`${Math.round(g.angle)}°`);
+  if (g.type === 'frame' || g.type === 'aperture') out.push(c.shape.toUpperCase());
+  if ((g.type === 'aperture' || g.type === 'halo') && Math.abs((c.ratio ?? 1) - 1) > 0.02) out.push(c.ratio < 1 ? `TALL ${(1 / c.ratio).toFixed(1)}×` : `WIDE ${c.ratio.toFixed(1)}×`);
+  if (g.type === 'bands' || g.type === 'frame') out.push(`${c.count} BANDS`);
+  if (g.type === 'aperture') out.push(`GLOW ${Math.round(c.glow * 100)}`);
+  if (g.type === 'halo') out.push(`CORONA ${Math.round(c.glow * 100)}`);
+  if (c.symmetry !== 'none') out.push(c.symmetry === 'kaleido' ? `KALEIDO ${c.slices}` : c.symmetry.toUpperCase());
+  if (c.rotation) out.push(`ROTATE ${Math.round(c.rotation)}°`);
+  const w = g.weather;
+  (['fog', 'haze', 'frost', 'clouds', 'heat', 'dusk', 'pixel'] as const).forEach((k) => w[k] >= 0.05 && out.push(`${k.toUpperCase()} ${Math.round(w[k] * 100)}`));
+  if (g.motion.mode !== 'none') out.push(`${g.motion.mode.toUpperCase()} ${Math.round(g.motion.duration)}S`);
+  if (g.interact.mode !== 'none') out.push(`CURSOR ${g.interact.mode.toUpperCase()}`);
+  return out;
 }
 
 export async function generateFromText(prompt: string, signal?: AbortSignal): Promise<TextResult> {
@@ -71,6 +115,10 @@ const WORDS: Record<string, [number, number, number]> = {
 
 const MOODS: { match: RegExp; hues: number[]; L: [number, number]; C: number; type?: Gradient['type']; weather?: Partial<Gradient['weather']>; place?: string }[] = [
   // Most specific moods first: 'neon at 2am' should read as neon, not just night.
+  // Named art forms beat time-of-day words: 'Turrell window at dusk' is an aperture, not a sunset.
+  { match: /turrell|skyspace|aperture|light ?(art|work|installation|box)|window of light/, hues: [270, 300, 30], L: [0.12, 0.85], C: 0.1, type: 'aperture', weather: { fog: 0.3, haze: 0.2 }, place: 'RODEN CRATER' },
+  { match: /horizon|rothko|strata|layers|seascape|sea line/, hues: [210, 30, 250], L: [0.3, 0.85], C: 0.08, type: 'bands', weather: { haze: 0.3 }, place: 'ICELAND FJORD' },
+  { match: /eclipse|halo|corona|moon ring|ring of light/, hues: [260, 40, 280], L: [0.08, 0.95], C: 0.08, type: 'halo', weather: { haze: 0.3 }, place: 'ATACAMA' },
   { match: /neon|cyber|synth|80s|retro|arcade|tokyo/, hues: [330, 290, 200], L: [0.2, 0.75], C: 0.22, type: 'mesh', weather: { haze: 0.35 }, place: 'TOKYO' },
   { match: /sunset|dusk|golden|evening|sundown/, hues: [260, 320, 20, 60], L: [0.35, 0.88], C: 0.13, type: 'linear', place: 'BIG SUR' },
   { match: /sunrise|dawn|morning|first light/, hues: [250, 330, 40, 80], L: [0.55, 0.95], C: 0.09, type: 'linear', place: 'PATAGONIA' },
@@ -81,9 +129,6 @@ const MOODS: { match: RegExp; hues: number[]; L: [number, number]; C: number; ty
   { match: /desert|dune|sand|canyon|mesa/, hues: [55, 40, 75], L: [0.45, 0.92], C: 0.1, type: 'linear', weather: { heat: 0.3 }, place: 'SAHARA' },
   { match: /fire|lava|volcano|ember|flame/, hues: [30, 15, 55], L: [0.12, 0.8], C: 0.2, type: 'radial', place: 'ETNA' },
   { match: /ice|snow|glacier|winter|frost|arctic/, hues: [230, 210, 250], L: [0.55, 0.98], C: 0.05, type: 'linear', weather: { haze: 0.25 }, place: 'SVALBARD' },
-  { match: /turrell|skyspace|aperture|light ?(art|work|installation|box)|window of light/, hues: [270, 300, 30], L: [0.12, 0.85], C: 0.1, type: 'aperture', weather: { fog: 0.3, haze: 0.2 }, place: 'RODEN CRATER' },
-  { match: /horizon|rothko|strata|layers|seascape|sea line/, hues: [210, 30, 250], L: [0.3, 0.85], C: 0.08, type: 'bands', weather: { haze: 0.3 }, place: 'ICELAND FJORD' },
-  { match: /eclipse|halo|corona|moon ring|ring of light/, hues: [260, 40, 280], L: [0.08, 0.95], C: 0.08, type: 'halo', weather: { haze: 0.3 }, place: 'ATACAMA' },
   { match: /aurora|northern lights/, hues: [160, 300, 270], L: [0.12, 0.8], C: 0.18, type: 'mesh', weather: { fog: 0.3, haze: 0.35 }, place: 'TROMSØ' },
   { match: /flower|bloom|blossom|cherry|petal|pastel|candy/, hues: [350, 320, 20], L: [0.75, 0.95], C: 0.08, type: 'mesh', weather: { fog: 0.3 }, place: 'PROVENCE' },
 ];
@@ -118,6 +163,8 @@ export function localTextGradient(prompt: string): Omit<TextResult, 'notice'> {
       return oklch(L, m.C * (0.8 + rand() * 0.4), H);
     });
     if (text.includes('sunset') || text.includes('sunrise') || text.includes('dawn')) colors.reverse();
+    // Apertures and halos read wall/sky first: start dark, end on the light.
+    if (mood?.type === 'aperture' || mood?.type === 'halo') colors.reverse();
   }
   const place = mood?.place ?? PLACES[Math.floor(rand() * PLACES.length)].place;
   const hh = /(\d{1,2})\s*(am|pm)/.exec(text);
@@ -133,5 +180,15 @@ export function localTextGradient(prompt: string): Omit<TextResult, 'notice'> {
     background: colors[colors.length - 1],
     weather: { haze: 0.22, ...mood?.weather },
   });
+  // Shape words, for the types that have a shape.
+  const c = gradient.composition;
+  if (gradient.type === 'aperture' || gradient.type === 'frame') {
+    if (/\barch(ed)?\b|chapel|doorway/.test(text)) c.shape = 'arch';
+    else if (/\bround\b|circle|circular|\borb\b|\bdisc\b/.test(text)) c.shape = 'circle';
+  }
+  if (gradient.type === 'aperture' || gradient.type === 'halo') {
+    if (/\btall\b|narrow|vertical|\bslit\b|portrait/.test(text)) c.ratio = 0.6;
+    else if (/\bwide\b|panoram|landscape|letterbox/.test(text)) c.ratio = 1.6;
+  }
   return { gradient, source: 'local', note: `Keyword match: ${[mood ? mood.match.source.split('|')[0] : null, ...words].filter(Boolean).join(', ') || 'mood from the words you used'}.` };
 }
