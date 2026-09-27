@@ -70,6 +70,7 @@ export function Library() {
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => useStore.getState().setLeftTab(t.id)}>
             {t.label}
+            {t.id === 'describe' && <span className="ai-text">✦</span>}
           </button>
         ))}
       </nav>

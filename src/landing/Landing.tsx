@@ -231,15 +231,16 @@ function TryStrip({ sky }: { sky: Sky }) {
   return (
     <section className="l-try">
       <form
-        className="l-try-box"
+        className={`l-try-box ${sky.busy ? 'is-busy' : ''}`}
         onSubmit={(e) => {
           e.preventDefault();
           sky.generate(text);
         }}
       >
+        <span className="ai-chip l-try-chip">✦ AI</span>
         <span className="l-try-label">Describe a sky</span>
         <input id="landing-describe" value={text} onChange={(e) => setText(e.target.value)} placeholder="Tokyo rain at 2am, neon on wet asphalt" maxLength={200} aria-label="Describe a sky" disabled={sky.busy} />
-        <button className="l-pill dark" disabled={!text.trim() || sky.busy}>
+        <button className="l-pill l-ai-btn" disabled={!text.trim() || sky.busy}>
           {sky.busy ? 'Painting…' : 'Generate'}
         </button>
       </form>
@@ -258,7 +259,9 @@ function TryStrip({ sky }: { sky: Sky }) {
         ))}
       </div>
       {sky.error && <p className="l-try-error">{sky.error}</p>}
-      <p className="l-try-hint">Claude paints it right onto the sky above. Like it? Press “Open this sky”.</p>
+      <p className="l-try-hint">
+        <span className="ai-text">Claude</span> paints it right onto the sky above. Like it? Press “Open this sky”.
+      </p>
     </section>
   );
 }
@@ -283,7 +286,7 @@ function Features() {
           <article key={f.title} className={`l-tile ${f.wide ? 'wide' : ''}`}>
             <Thumb g={preset(f.g)} w={f.wide ? 640 : 320} h={320} className="l-tile-art" />
             <div className="l-tile-text">
-              <span className="l-tag">{f.tag}</span>
+              <span className={f.tag === 'AI' ? 'ai-chip' : 'l-tag'}>{f.tag === 'AI' ? '✦ AI' : f.tag}</span>
               <h3>{f.title}</h3>
               <p>{f.body}</p>
             </div>
