@@ -18,8 +18,9 @@ interface AuthState {
   session: Session | null;
   ready: boolean;
   dialog: null | 'signin' | 'signup';
+  reason: string | null; // why we're asking, shown under the title
   afterAuth: (() => void) | null;
-  open: (mode?: 'signin' | 'signup', then?: () => void) => void;
+  open: (mode?: 'signin' | 'signup', then?: () => void, reason?: string) => void;
   close: () => void;
 }
 
@@ -27,9 +28,10 @@ export const useAuth = create<AuthState>((set) => ({
   session: null,
   ready: !supabase,
   dialog: null,
+  reason: null,
   afterAuth: null,
-  open: (mode = 'signin', then) => set({ dialog: mode, afterAuth: then ?? null }),
-  close: () => set({ dialog: null, afterAuth: null }),
+  open: (mode = 'signin', then, reason) => set({ dialog: mode, afterAuth: then ?? null, reason: reason ?? null }),
+  close: () => set({ dialog: null, afterAuth: null, reason: null }),
 }));
 
 if (supabase) {

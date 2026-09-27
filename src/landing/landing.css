@@ -55,6 +55,24 @@
 .l-shuffle { color: #fff; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.35); }
 .l-shuffle:hover { background: rgba(255, 255, 255, 0.15); }
 
+/* Light skies: dark type and dark buttons. */
+.l-hero { transition: color 0.4s ease; }
+.l-hero.ink-dark { color: #111; }
+.l-hero.ink-dark .l-pill.light { background: #111; color: #fff; }
+.l-hero.ink-dark .l-pill.glass { color: #111; background: rgba(255, 255, 255, 0.35); border-color: rgba(0, 0, 0, 0.2); }
+.l-hero.ink-dark .l-shuffle { color: #111; border-color: rgba(0, 0, 0, 0.25); }
+.l-hero-canvas { animation: sky-in 0.9s ease-out; }
+@keyframes sky-in { from { opacity: 0; } }
+.l-hero-canvas { transition: filter 0.8s ease; }
+.l-hero.is-busy .l-hero-canvas { filter: saturate(0.6) blur(8px); }
+.l-hero-foot { padding-bottom: 62px; }
+.l-hero-caption { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.l-hero-caption em { font-style: normal; opacity: 0.85; text-transform: none; letter-spacing: 0.02em; }
+.l-badge { padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; font-size: 9.5px; }
+.l-reading { animation: breathe 1.3s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: 0.35; } }
+.l-shuffle:disabled { opacity: 0.5; }
+
 /* ---------------------------------------------------------------- try strip */
 .l-try { max-width: 860px; margin: -38px auto 0; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .l-try-box { width: 100%; display: flex; align-items: center; gap: 12px; background: var(--l-card); border-radius: 999px; padding: 8px 8px 8px 24px; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.04); }
@@ -62,7 +80,10 @@
 .l-try-box input { flex: 1; min-width: 0; border: 0; outline: none; font: inherit; font-size: 17px; background: none; color: var(--l-ink); padding: 10px 0; letter-spacing: -0.01em; }
 .l-try-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .l-try-chips button { font-size: 13.5px; padding: 7px 14px; border-radius: 999px; background: var(--l-card); border: 1px solid var(--l-line); color: var(--l-sub); }
-.l-try-chips button:hover { color: var(--l-ink); border-color: var(--l-ink); }
+.l-try-chips button:hover:not(:disabled) { color: var(--l-ink); border-color: var(--l-ink); }
+.l-try-chips button:disabled { opacity: 0.5; }
+.l-try-error { color: #c0392b; margin: 0; font-size: 14px; }
+.l-try-hint { color: var(--l-sub); margin: 0; font-size: 13.5px; }
 
 /* ---------------------------------------------------------------- sections */
 .l-features, .l-community { max-width: 1280px; margin: 0 auto; padding: 110px 8px 0; }
@@ -156,6 +177,7 @@
   .l-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .l-hero-canvas, .l-reading { animation: none; }
   .l-pill, .l-tile, .l-card-art .thumb { transition: none; }
   .l-card.skeleton { animation: none; }
 }

@@ -29,7 +29,7 @@ The anon key is meant to be public; row level security in the schema lets anyone
 
 ## Routes
 
-`/` landing page · `/studio` the app (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt)
+`/` landing page (the Describe box repaints the hero with Claude) · `/studio` the app, signed-in only when Supabase is configured (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt)
 
 ## What's in v0.3
 

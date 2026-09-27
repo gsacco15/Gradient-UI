@@ -5,6 +5,7 @@ import { accountsEnabled, sendMagicLink, signIn, signUp, useAuth } from '../lib/
 export function AuthDialog() {
   const mode = useAuth((s) => s.dialog);
   const close = useAuth((s) => s.close);
+  const reason = useAuth((s) => s.reason);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -56,7 +57,7 @@ export function AuthDialog() {
           ×
         </button>
         <h2 id="auth-title">{signup ? 'Join Atmos' : 'Welcome back'}</h2>
-        <p className="auth-sub">{signup ? 'Share gradients to the community and like other people’s work.' : 'Sign in to share and like gradients.'}</p>
+        <p className="auth-sub">{reason ?? (signup ? 'Free. Make gradients, share them to the community and like other people’s work.' : 'Sign in to open the studio.')}</p>
         {!accountsEnabled ? (
           <p className="auth-note">Accounts aren’t switched on for this site yet. The studio works fully without one.</p>
         ) : (

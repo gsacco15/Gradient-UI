@@ -12,7 +12,7 @@ import { Welcome } from './components/Welcome';
 import { remix } from './lib/generate';
 import { gradientFromHash } from './lib/share';
 import { accountsEnabled, displayName, publish, requireAccount, signOut, useAuth } from './lib/supabase';
-import { linkTo } from './router';
+import { linkTo, navigate } from './router';
 import { useStore, type View } from './store';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
@@ -133,7 +133,9 @@ function Account() {
 }
 
 function confirmSignOut() {
-  signOut().then(() => useStore.getState().notify('SIGNED OUT'));
+  // Leave the studio first so signing out doesn't bounce into the sign-in prompt.
+  navigate('/');
+  signOut();
 }
 
 function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boolean) => void }) {
