@@ -567,7 +567,7 @@ function HowItWorks() {
       n: '03',
       title: 'Use it',
       body: 'A phone wallpaper, code for your site, a print, a film, or a light piece for your wall.',
-      g: 'MOON RING',
+      g: 'WHITEOUT',
       art: (
         <span className="l-how-uses" aria-hidden>
           <span className="l-how-obj">
