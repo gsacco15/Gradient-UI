@@ -63,7 +63,7 @@ export default function App() {
           </div>
           {view === 'gradient' && <span className="kbd-hint">DOUBLE-CLICK TO ADD · HOLD C TO COMPARE · ⌘Z UNDO</span>}
           <a className="lab-link" {...linkTo('/led')} title="Preview this sky as an LED light piece and get the build sheet">
-            LED Lab ↗
+            LED LAB ↗
           </a>
         </nav>
       </main>
@@ -189,7 +189,7 @@ function TopBar({ compare, setCompare, onDescribe }: { compare: boolean; setComp
           title="Describe a sky in words and Claude paints it"
         >
           <span className="ai-star">✦</span>
-          Describe with AI
+          DESCRIBE WITH AI
         </button>
         <span className="sep" />
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">

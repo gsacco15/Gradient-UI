@@ -444,9 +444,10 @@ a.brand { color: inherit; text-decoration: none; }
 
 .opt-label.spaced { margin-top: 8px; }
 .describe-controls { font-size: 10px; letter-spacing: 0.06em; color: var(--muted); line-height: 1.6; margin: 0 0 10px; }
-/* The Lab link: royal blue, so it reads as a way out to something new. */
-.view-tabs .lab-link { margin-left: auto; font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: -0.005em; color: #2445e0; text-decoration: none; padding: 6px 12px; border-radius: 999px; background: rgba(36, 69, 224, 0.08); white-space: nowrap; }
-@media (hover: hover) { .view-tabs .lab-link:hover { background: rgba(36, 69, 224, 0.15); } }
+/* The Lab link: plain mono caps like the rest of the studio, in royal blue with a small dot. */
+.view-tabs .lab-link { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; letter-spacing: 0.06em; color: #2445e0; text-decoration: none; padding: 6px 0; white-space: nowrap; }
+.view-tabs .lab-link::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #2445e0; }
+@media (hover: hover) { .view-tabs .lab-link:hover { text-decoration: underline; text-underline-offset: 3px; } }
 .view-tabs .kbd-hint + .lab-link { margin-left: 16px; }
 
 /* crash screen */
@@ -457,9 +458,9 @@ a.brand { color: inherit; text-decoration: none; }
 .crash-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
 .crash-actions button, .crash-actions a { font: inherit; font-weight: 600; font-size: 15px; padding: 11px 20px; border-radius: 999px; border: 0; background: #111; color: #fff; text-decoration: none; cursor: pointer; }
 .crash-actions a { background: transparent; color: #111; box-shadow: inset 0 0 0 1.5px #111; }
-/* The AI entry point: a white pill with a thin sky-gradient edge and a soft glow. */
-.actions .ai-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: -0.005em; text-transform: none; color: #111; padding: 7px 14px 7px 12px; border-radius: 999px; border: 1px solid transparent; background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #2445e0, #9b6fe0 45%, #f2a98a) border-box; box-shadow: 0 6px 18px -8px rgba(107, 79, 160, 0.55); transition: box-shadow 0.2s ease, transform 0.2s ease; }
-.actions .ai-btn .ai-star { font-size: 12px; background: linear-gradient(120deg, #2445e0, #9b6fe0 50%, #f2a98a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-@media (hover: hover) { .actions .ai-btn:hover { box-shadow: 0 8px 24px -8px rgba(107, 79, 160, 0.75); transform: translateY(-1px); } }
+/* The AI entry point, in the studio's own language: a square outline like SHARE, with a sky-gradient edge. */
+.actions .ai-btn { display: inline-flex; align-items: center; gap: 7px; color: var(--ink) !important; padding: 7px 14px 7px 12px; border: 1px solid transparent; background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #2445e0, #9b6fe0 50%, #f2a98a) border-box; }
+.actions .ai-btn .ai-star { font-size: 11px; background: linear-gradient(120deg, #2445e0, #9b6fe0 50%, #f2a98a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (hover: hover) { .actions .ai-btn:hover { background: linear-gradient(var(--soft), var(--soft)) padding-box, linear-gradient(120deg, #2445e0, #9b6fe0 50%, #f2a98a) border-box; } }
 .describe-locked h3 { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; font-size: 22px; letter-spacing: -0.03em; margin: 4px 0 0; text-transform: none; }
 .gl-error span { align-self: end; margin-bottom: 44px; font-size: 10px; background: rgba(255, 255, 255, 0.75); color: #555; padding: 5px 10px; border-radius: 999px; }
