@@ -930,7 +930,7 @@ function useSerial() {
 
 /** A cut-away of the box from the side: wall on the left, you on the right, and where the light goes. */
 function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
-  const ray = (d: string, i: number) => <path key={i} d={d} stroke={glow} strokeWidth="1.6" fill="none" strokeLinecap="round" markerEnd="url(#led-arrow)" opacity="0.9" />;
+  const ray = (d: string, i: number) => <path key={i} d={d} stroke="#2445e0" strokeWidth="1.6" fill="none" strokeLinecap="round" markerEnd="url(#led-arrow)" opacity="0.75" />;
   const ys = [44, 66, 88, 110];
   let leds: React.ReactNode = null, rays: React.ReactNode[] = [], label = '';
   if (mount === 'forward') {
@@ -938,7 +938,7 @@ function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
     leds = (
       <>
         <rect x="30" y="34" width="5" height="88" fill="#bbb" />
-        {ys.map((y) => <rect key={y} x="35" y={y - 4} width="6" height="8" rx="1.5" fill={glow} />)}
+        {ys.map((y) => <rect key={y} x="35" y={y - 4} width="6" height="8" rx="1.5" fill={glow} stroke="#111" strokeOpacity="0.35" strokeWidth="0.6" />)}
       </>
     );
     rays = ys.flatMap((y) => [`M44 ${y} L236 ${y}`, `M44 ${y} L236 ${y - 14}`, `M44 ${y} L236 ${y + 14}`]).map(ray);
@@ -947,7 +947,7 @@ function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
     leds = (
       <>
         <rect x="118" y="34" width="5" height="88" fill="#bbb" />
-        {ys.map((y) => <rect key={y} x="112" y={y - 4} width="6" height="8" rx="1.5" fill={glow} />)}
+        {ys.map((y) => <rect key={y} x="112" y={y - 4} width="6" height="8" rx="1.5" fill={glow} stroke="#111" strokeOpacity="0.35" strokeWidth="0.6" />)}
       </>
     );
     rays = ys.flatMap((y) => [`M110 ${y} L34 ${y}`, `M34 ${y} L236 ${y - 22}`, `M34 ${y} L236 ${y + 8}`]).map(ray);
@@ -955,8 +955,8 @@ function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
     label = 'One strip around the edge, shining across the box';
     leds = (
       <>
-        {[60, 100].map((x) => <rect key={`t${x}`} x={x - 4} y="24" width="8" height="6" rx="1.5" fill={glow} />)}
-        {[60, 100].map((x) => <rect key={`b${x}`} x={x - 4} y="130" width="8" height="6" rx="1.5" fill={glow} />)}
+        {[60, 100].map((x) => <rect key={`t${x}`} x={x - 4} y="24" width="8" height="6" rx="1.5" fill={glow} stroke="#111" strokeOpacity="0.35" strokeWidth="0.6" />)}
+        {[60, 100].map((x) => <rect key={`b${x}`} x={x - 4} y="130" width="8" height="6" rx="1.5" fill={glow} stroke="#111" strokeOpacity="0.35" strokeWidth="0.6" />)}
       </>
     );
     rays = [`M60 32 L236 90`, `M100 32 L236 118`, `M60 32 L34 70`, `M60 128 L236 70`, `M100 128 L236 42`, `M60 128 L34 90`, `M34 70 L236 60`, `M34 90 L236 100`].map(ray);
@@ -966,7 +966,7 @@ function MountDiagram({ mount, glow }: { mount: Mount; glow: string }) {
       <svg viewBox="0 0 320 160" role="img" aria-label={`Side view: ${label}`}>
         <defs>
           <marker id="led-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-            <path d="M0 0 L8 4 L0 8 z" fill={glow} />
+            <path d="M0 0 L8 4 L0 8 z" fill="#2445e0" />
           </marker>
           <marker id="led-look" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
             <path d="M0 0 L8 4 L0 8 z" fill="#6d6b66" />
