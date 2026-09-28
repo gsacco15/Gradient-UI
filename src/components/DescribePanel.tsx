@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MAX_PROMPT } from '../lib/aiSchema';
 import { describeControls, generateFromText, type TextResult } from '../lib/textGradient';
 import { useStore } from '../store';
+import { accountsEnabled, useAuth } from '../lib/supabase';
 import { Thumb } from './Thumb';
 
 const EXAMPLES = ['Tokyo rain at 2am', 'Iceland glacier at first light', 'Tall arched Turrell window at dusk', 'Total eclipse over the Atacama', 'Rothko sea horizon', 'Deep sea bioluminescence'];
@@ -43,6 +44,22 @@ export function DescribePanel() {
   }, []);
 
   const latest = history[0];
+  const session = useAuth((s) => s.session);
+
+  if (accountsEnabled && !session)
+    return (
+      <div className="pad stack describe-locked">
+        <div className="exp-tag"><span className="exp-dot" />AI · BY CLAUDE</div>
+        <h3>Describe any sky.</h3>
+        <p className="hint">Type a place, a moment or a mood, like “Tokyo rain at 2am”, and Claude paints it: colours, place, time, even motion.</p>
+        <button className="btn wide" onClick={() => useAuth.getState().open('signup', undefined, 'Create a free account to describe skies with Claude.')}>
+          CREATE A FREE ACCOUNT TO USE IT
+        </button>
+        <button className="link" onClick={() => useAuth.getState().open('signin')}>
+          Already have one? Sign in
+        </button>
+      </div>
+    );
 
   return (
     <div className="pad stack">

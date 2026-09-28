@@ -5,6 +5,7 @@ import { useOnScreen, usePointer, useRenderLoop } from '../render/loop';
 import { Thumb } from '../components/Thumb';
 import { hexToOklab, hexToRgb, luminance } from '../lib/color';
 import { cloneGradient } from '../lib/gradient';
+import { cssBackground } from '../lib/exportCode';
 import { encodeGradient } from '../lib/share';
 import { generateFromText } from '../lib/textGradient';
 import { accountsEnabled, displayName, getShared, listCommunity, myLikes, requireAccount, setLike, shareUrl, signOut, useAuth, type SharedGradient, type Sort } from '../lib/supabase';
@@ -290,7 +291,7 @@ function Hero({ sky: h }: { sky: Sky }) {
   return (
     <header className={`l-hero ink-${ink} ${h.busy ? 'is-busy' : ''}`} ref={wrap}>
       <canvas ref={canvas} className="l-hero-canvas" aria-hidden />
-      {error && <div className="l-hero-fallback" />}
+      {error && <div className="l-hero-fallback" style={{ background: cssBackground(g) }} />}
       <div className="l-hero-notes" aria-hidden>
         <span>{g.place}</span>
         <span>{g.coords}</span>
@@ -437,7 +438,7 @@ function ViewerCanvas({ g, wrap }: { g: Gradient; wrap: React.RefObject<HTMLDivE
   return (
     <>
       <canvas ref={canvas} className="l-hero-canvas" aria-hidden />
-      {error && <div className="l-hero-fallback" />}
+      {error && <div className="l-hero-fallback" style={{ background: cssBackground(g) }} />}
     </>
   );
 }

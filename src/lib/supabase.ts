@@ -54,6 +54,12 @@ if (supabase) {
 export const displayName = (s: Session | null) =>
   (s?.user.user_metadata?.display_name as string | undefined) ?? s?.user.email?.split('@')[0] ?? 'anonymous';
 
+/** Run `fn` if signed in; otherwise ask to join (saying why) and run it right after. Without accounts, just run it. */
+export function withAccount(reason: string, fn: () => void) {
+  if (!supabase || useAuth.getState().session) fn();
+  else useAuth.getState().open('signup', fn, reason);
+}
+
 /** Run `fn` now if signed in, otherwise open sign-in and run it right after. */
 export function requireAccount(fn: () => void, mode: 'signin' | 'signup' = 'signup') {
   if (useAuth.getState().session) fn();

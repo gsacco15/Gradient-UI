@@ -2,6 +2,7 @@
 import { useRef } from 'react';
 import { hydrateGradient } from '../lib/gradient';
 import { useStore } from '../store';
+import { withAccount } from '../lib/supabase';
 import { Thumb } from './Thumb';
 
 export function SavedPanel() {
@@ -25,7 +26,7 @@ export function SavedPanel() {
   return (
     <div className="pad stack">
       <div className="row">
-        <button className="btn" onClick={() => { useStore.getState().set({ projectId: null }); useStore.getState().saveProject(); }}>
+        <button className="btn" onClick={() => withAccount('Create a free account to save your skies. Everything you made so far comes with you.', () => { useStore.getState().set({ projectId: null }); useStore.getState().saveProject(); })}>
           SAVE AS NEW
         </button>
         <button className="btn ghost" onClick={() => file.current?.click()}>

@@ -4,6 +4,7 @@ import { download, slug } from '../lib/exportCode';
 import { idbDel, idbGet } from '../lib/idb';
 import { readImageFile } from '../lib/palette';
 import { useStore } from '../store';
+import { exportGated } from '../lib/gates';
 import type { Weather } from '../types';
 import { GradientRenderer, grainScale } from '../render/renderer';
 import { useRenderLoop } from './Canvas';
@@ -253,7 +254,7 @@ export function HorizonInspector() {
         ))}
       </Section>
       <StillSection />
-      <button className="btn wide" onClick={() => useStore.getState().set({ exportOpen: true })}>
+      <button className="btn wide" onClick={exportGated}>
         EXPORT FILM
       </button>
     </div>

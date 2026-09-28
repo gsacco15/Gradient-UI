@@ -12,8 +12,9 @@ import { Thumb } from './components/Thumb';
 import { Welcome } from './components/Welcome';
 import { remix } from './lib/generate';
 import { gradientFromHash } from './lib/share';
-import { accountsEnabled, displayName, requireAccount, signOut, useAuth } from './lib/supabase';
+import { accountsEnabled, displayName, requireAccount, signOut, useAuth, withAccount } from './lib/supabase';
 import { linkTo, navigate } from './router';
+import { exportGated, saveGated } from './lib/gates';
 import { useStore, type View } from './store';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
@@ -40,7 +41,7 @@ export default function App() {
 
   return (
     <div className={`app pane-${pane}`}>
-      <TopBar compare={compare} setCompare={setCompare} />
+      <TopBar compare={compare} setCompare={setCompare} onDescribe={() => setPane('library')} />
       <aside className="left">
         <Library />
       </aside>
@@ -163,7 +164,7 @@ function confirmSignOut() {
   signOut();
 }
 
-function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boolean) => void }) {
+function TopBar({ compare, setCompare, onDescribe }: { compare: boolean; setCompare: (v: boolean) => void; onDescribe: () => void }) {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const showLabels = useStore((s) => s.showLabels);
@@ -176,6 +177,20 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
         <span>[ studio ]</span>
       </a>
       <div className="actions">
+        <button
+          className="ai-btn"
+          onClick={() =>
+            withAccount('Create a free account to describe skies with Claude.', () => {
+              s().setLeftTab('describe');
+              onDescribe();
+              setTimeout(() => document.querySelector<HTMLTextAreaElement>('.describe textarea')?.focus(), 60);
+            })
+          }
+          title="Describe a sky in words and Claude paints it"
+        >
+          ✦ Describe
+        </button>
+        <span className="sep" />
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">
           UNDO
         </button>
@@ -206,13 +221,13 @@ function TopBar({ compare, setCompare }: { compare: boolean; setCompare: (v: boo
           </>
         )}
         <span className="sep" />
-        <button onClick={() => s().saveProject()} title="Save to this browser (⌘S)">
+        <button onClick={saveGated} title="Save (⌘S)">
           SAVE
         </button>
         <Account />
         <span className="main-actions">
           <ShareButton />
-          <button className="primary" onClick={() => s().set({ exportOpen: true })} title="Export (E)">
+          <button className="primary" onClick={exportGated} title="Export (E)">
             EXPORT
           </button>
         </span>
@@ -282,7 +297,7 @@ function useShortcuts(setCompare: (v: boolean) => void) {
       }
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        s.saveProject();
+        saveGated();
         return;
       }
       if (typing(e) || mod || e.altKey) return;
@@ -296,7 +311,7 @@ function useShortcuts(setCompare: (v: boolean) => void) {
       }
       const k = e.key.toLowerCase();
       if (k === 'r') s.shuffle(e.shiftKey);
-      if (k === 'e') s.set({ exportOpen: true });
+      if (k === 'e') exportGated();
       if (k === 'l') s.set({ showLabels: !s.showLabels });
       if (k === 'c' && !e.repeat && s.view === 'gradient') setCompare(true);
       if (k === ' ' && s.view === 'gradient') {

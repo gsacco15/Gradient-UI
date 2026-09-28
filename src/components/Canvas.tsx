@@ -5,6 +5,7 @@ import { grainScale, renderPixels } from '../render/renderer';
 import { luminance, rgbToHex } from '../lib/color';
 import { nameForColor } from '../data/names';
 import { useStore } from '../store';
+import { cssBackground } from '../lib/exportCode';
 import type { Gradient } from '../types';
 import { usePointer, useRenderLoop } from '../render/loop';
 
@@ -63,7 +64,11 @@ export function GradientCanvas({ compare }: { compare: boolean }) {
   return (
     <div className="canvas-wrap" ref={wrapRef} onDoubleClick={onDoubleClick}>
       <canvas ref={canvasRef} className="gl-canvas" aria-label={`${gradient.name} gradient preview`} />
-      {error && <div className="gl-error">{error}</div>}
+      {error && (
+        <div className="gl-error" style={{ background: cssBackground(shown) }}>
+          <span>Live preview isn’t available in this browser, so this is a close CSS version.</span>
+        </div>
+      )}
       {!compare && <Handles wrapRef={wrapRef} />}
       {compare && <div className="compare-tag">BEFORE</div>}
       {showLabels && <FieldNotes g={compare ? baseline : gradient} />}

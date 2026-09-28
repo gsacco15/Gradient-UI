@@ -1,5 +1,6 @@
 // Lazily rendered gradient thumbnails (queued so a big gallery never blocks the page).
 import { useEffect, useRef, useState } from 'react';
+import { cssBackground } from '../lib/exportCode';
 import { gradientKey } from '../lib/gradient';
 import { renderDataURL } from '../render/renderer';
 import type { Gradient } from '../types';
@@ -46,5 +47,7 @@ export function useThumb(g: Gradient, w: number, h: number, priority = false): s
 
 export function Thumb({ g, w = 160, h = 200, className = '', priority = false }: { g: Gradient; w?: number; h?: number; className?: string; priority?: boolean }) {
   const url = useThumb(g, w, h, priority);
-  return <div className={`thumb ${className}`} style={{ backgroundImage: url ? `url(${url})` : undefined, aspectRatio: `${w} / ${h}` }} />;
+  // The CSS version sits underneath, so a thumbnail is never blank: it shows at once, and stays if WebGL is unavailable.
+  const css = cssBackground(g).replace(/\s*\n\s*/g, ' ');
+  return <div className={`thumb ${className}`} style={{ background: url ? `center / cover no-repeat url(${url}), ${css}` : css, aspectRatio: `${w} / ${h}` }} />;
 }

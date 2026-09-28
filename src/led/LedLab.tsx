@@ -6,6 +6,7 @@ import { download } from '../lib/exportCode';
 import { adalight, buildLayout, DEFAULT_LED, FRAMES, fastLedSketch, inToMm, layoutJson, LED_TYPES, ledStats, mmToIn, sampleLeds, gridFor, wledStill, type Mount, type LedLayout, type LedSettings, type LedShape } from '../lib/led';
 import { GradientRenderer, renderPixels } from '../render/renderer';
 import { gradientFromHash } from '../lib/share';
+import { generateFromText } from '../lib/textGradient';
 import { blueprintHtml, blueprintSvg, templateHtml, templatePages, type BuildInfo, type Paper } from '../lib/blueprint';
 import { linkTo } from '../router';
 import { useStore } from '../store';
@@ -146,9 +147,38 @@ export default function LedLab() {
   const [look, setLook] = useState<Look>(linked ? { ...initial.look, bezelWidth: 'none' } : initial.look);
   const [source, setSource] = useState(linked ? 'linked' : initial.source);
   const studio = useStore((st) => st.gradient);
+  // A sky described right here in the Lab (free, no account needed).
+  const [painted, setPainted] = useState<Gradient | null>(null);
+  const [ask, setAsk] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [askNote, setAskNote] = useState<string | null>(null);
+  const paint = async (text: string) => {
+    const p = text.trim() || 'A Turrell skyspace at dusk';
+    if (asking) return;
+    (document.activeElement as HTMLElement | null)?.blur();
+    setAsking(true);
+    setAskNote(null);
+    try {
+      const r = await generateFromText(p);
+      setPainted(r.gradient);
+      setSource('painted');
+      setAskNote(r.source === 'ai' ? `Painted by Claude · ${r.gradient.name}` : `Built-in generator · ${r.gradient.name}`);
+    } catch (e) {
+      setAskNote((e as Error).message);
+    } finally {
+      setAsking(false);
+    }
+  };
   const src = useMemo(
-    () => (source === 'linked' && linked ? linked : source === 'studio' ? studio : COLLECTIONS.flatMap((c) => c.gradients).find((g) => g.name === source) ?? studio),
-    [source, studio, linked],
+    () =>
+      source === 'painted' && painted
+        ? painted
+        : source === 'linked' && linked
+          ? linked
+          : source === 'studio'
+            ? studio
+            : COLLECTIONS.flatMap((c) => c.gradients).find((g) => g.name === source) ?? studio,
+    [source, studio, linked, painted],
   );
   const g = useMemo(() => forLeds(src), [src]);
   const layout = useMemo(() => buildLayout(s), [s]);
@@ -245,7 +275,24 @@ export default function LedLab() {
 
         <aside className="led-panel">
           <Group title="Sky">
+            <form
+              className="led-ask"
+              onSubmit={(e) => {
+                e.preventDefault();
+                paint(ask);
+              }}
+            >
+              <span className="led-ask-tag">✦ Describe a sky</span>
+              <div>
+                <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="A Turrell skyspace at dusk" maxLength={200} aria-label="Describe a sky" enterKeyHint="go" readOnly={asking} />
+                <button className="l-pill dark" disabled={asking}>
+                  {asking ? 'Painting…' : 'Paint'}
+                </button>
+              </div>
+              {askNote && <p className="led-hint">{askNote}</p>}
+            </form>
             <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Gradient">
+              {painted && <option value="painted">Described · {painted.name}</option>}
               {linked && <option value="linked">From the home page · {linked.name}</option>}
               <option value="studio">Your studio sky · {studio.name}</option>
               {COLLECTIONS.map((c) => (
