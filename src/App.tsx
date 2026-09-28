@@ -188,7 +188,8 @@ function TopBar({ compare, setCompare, onDescribe }: { compare: boolean; setComp
           }
           title="Describe a sky in words and Claude paints it"
         >
-          ✦ Describe
+          <span className="ai-star">✦</span>
+          Describe with AI
         </button>
         <span className="sep" />
         <button onClick={() => s().undo()} disabled={!canUndo} title="Undo (⌘Z)">
