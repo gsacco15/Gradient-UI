@@ -39,7 +39,7 @@ interface Look {
 
 /** The starting piece, for the Lab and the home page: a dense oval, no bezel, bare LEDs beside the diffused glow. */
 const PIECE: LedSettings = { frameW: 18 * 25.4, frameH: 24 * 25.4, shape: 'oval', pitch: 1000 / 144, margin: 15, wiring: 'serpentine', start: 'top', mount: 'forward' };
-const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, spill: false, bezel: 'black', bezelWidth: 'none' };
+const PIECE_LOOK: Look = { view: 'split', diffusion: 0.85, brightness: 1, gamma: 2.2, room: 'dark', wires: false, playing: false, spill: true, bezel: 'black', bezelWidth: 'none' };
 const SETTINGS_KEY = 'atmos.led';
 const load = (): { s: LedSettings; look: Look; source: string } => {
   const fallback = { s: { ...DEFAULT_LED, ...PIECE }, look: { ...PIECE_LOOK, playing: true }, source: 'studio' };
@@ -314,7 +314,7 @@ export default function LedLab() {
                 setS({ ...DEFAULT_LED, ...PIECE });
                 setLook({ ...PIECE_LOOK, playing: true });
               }}
-              title="Back to the starting piece: 18 × 24 in oval, 144 LEDs/m, split view, no bezel"
+              title="Back to the starting piece: 18 × 24 in oval, 144 LEDs/m, split view, no bezel, wall glow on"
             >
               Reset to default
             </button>
