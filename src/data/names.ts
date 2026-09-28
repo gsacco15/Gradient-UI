@@ -72,6 +72,7 @@ export const PLACES: Place[] = [
   { place: 'RODEN CRATER', coords: '35.43° N · 111.26° W', mood: 'warm' },
   { place: 'PATAGONIA', coords: '50.94° S · 73.40° W', mood: 'cold' },
   { place: 'SAHARA', coords: '23.41° N · 25.66° E', mood: 'warm' },
+  { place: 'LENÇÓIS MARANHENSES', coords: '2.49° S · 43.12° W', mood: 'soft' },
   { place: 'ATACAMA', coords: '24.50° S · 69.25° W', mood: 'warm' },
   { place: 'AMAZON', coords: '3.47° S · 62.37° W', mood: 'lush' },
   { place: 'BORNEO', coords: '0.96° N · 114.55° E', mood: 'lush' },

@@ -106,6 +106,7 @@ const DATA: Record<string, { title: string; blurb: string; rows: Row[] }> = {
       ['HEAT SHIMMER', 'DEATH VALLEY', '14:50', 'mesh', ['#F1C9A5', '#E3C27A', '#F5E6C8', '#E8925A'], { weather: { heat: 0.6, fog: 0.3, haze: 0.25 }, motion: { mode: 'flow', speed: 0.4, duration: 8 } }],
       ['CANYON WALL', 'ATACAMA', '16:15', 'linear', ['#F29A5E', '#C8643B', '#A64B2A', '#7A2E1E'], { angle: 120, weather: { frost: 0.45 } }],
       ['MIRAGE', 'NAMIB', '12:12', 'radial', ['#F5E6C8', '#F1C9A5', '#A9C8EC'], { center: { x: 0.5, y: 0.9 }, weather: { heat: 0.5, haze: 0.25 } }],
+      ['LENÇÓIS', 'LENÇÓIS MARANHENSES', '06:40', 'mesh', ['#E9E2D2', '#BFD9CF', '#8FC5C6', '#4D98A8', '#2B5B70', '#C4B38F'], { background: '#D9D2C0', weather: { fog: 0.45, haze: 0.3 } }],
       ['DUST DEVIL', 'SAHARA', '15:33', 'conic', ['#D9B48A', '#B88A5A', '#EFD9B4', '#D9B48A'], { weather: { fog: 0.5, haze: 0.45 } }],
       ['ADOBE NOON', 'CAPPADOCIA', '12:00', 'mesh', ['#E8925A', '#F5E6C8', '#8C5A3C', '#F9C79A'], soft],
       ['BLEACHED BONE', 'NAMIB', '11:11', 'frame', ['#FBF6EE', '#EFD9B4', '#D9B48A'], frame(4, 'arch')],

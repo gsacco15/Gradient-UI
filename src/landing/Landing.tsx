@@ -13,6 +13,8 @@ import { grainScale, renderPixels } from '../render/renderer';
 import { linkTo, navigate } from '../router';
 import type { Gradient } from '../types';
 import horizonSample from './horizon-sample.webp';
+import lencoisPalette from './lencois-palette.webp';
+import lencoisPhoto from './lencois-photo.webp';
 import './landing.css';
 
 // The Lab piece loads with the Lab's code, only when its section is near the screen.
@@ -511,15 +513,24 @@ function HowItWorks() {
       body: 'Name a place, a mood or a moment. Claude chooses the colours, the place and the hour.',
       g: 'GLACIER HOUR',
       art: (
-        <span className="l-how-ask" aria-hidden>
-          <span className="l-how-field">
-            <span className="l-how-typed">Iceland glacier at first light</span>
-            <b>Paint it →</b>
+        <>
+          {/* The place on the left, the sky Atmos drew from it on the right. */}
+          <span className="l-how-split" aria-hidden>
+            <img src={lencoisPhoto} alt="" loading="lazy" />
+            <img src={lencoisPalette} alt="" loading="lazy" />
+            <em className="l-how-cap l">THE PLACE</em>
+            <em className="l-how-cap r">THE PALETTE</em>
           </span>
-          <span className="l-how-by">
-            <i /> BY CLAUDE · ICELAND FJORD · 05:12
+          <span className="l-how-ask" aria-hidden>
+            <span className="l-how-field">
+              <span className="l-how-typed">Lençóis dunes from above</span>
+              <b>Paint it →</b>
+            </span>
+            <span className="l-how-by">
+              <i /> BY CLAUDE · LENÇÓIS MARANHENSES · 06:40
+            </span>
           </span>
-        </span>
+        </>
       ),
     },
     {
