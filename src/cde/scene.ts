@@ -170,7 +170,7 @@ function paperTexture(size = 256) {
 
 // ---------------------------------------------------------------- people on foot
 
-interface Walker {
+export interface Walker {
   id: number;
   x: number;
   y: number;
@@ -462,6 +462,11 @@ export class CdeScene {
 
   isStriking() {
     return !!this.fx;
+  }
+
+  /** Seconds since release on the strike's own clock (null when no strike is on). */
+  strikeTime() {
+    return this.fx ? this.fx.t : null;
   }
 
   /** Release: fly in along the heading, fall, detonate. The outcome is one draw from the same model. */

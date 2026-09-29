@@ -30,6 +30,7 @@ import {
   type WeaponId,
 } from './model';
 import { CdeScene, type Frame, type Outcome } from './scene';
+import type { Frame3D, Model3D } from './view3d';
 import type { JobIn, JobOut } from './worker';
 import '../landing/landing.css';
 import './cde.css';
@@ -149,6 +150,12 @@ export default function CdeLab() {
   const [dayPlay, setDayPlay] = useState(false);
   const [showCards, setShowCards] = useState(true);
   const [histMode, setHistMode] = useState<HistMode>('figure');
+  const [view, setView] = useState<'map' | 'model'>('map');
+  const [modelReady, setModelReady] = useState(false);
+  const canvas3dRef = useRef<HTMLCanvasElement>(null);
+  const labels3dRef = useRef<HTMLDivElement>(null);
+  const modelRef = useRef<Model3D | null>(null);
+  const strikeRef = useRef<{ plan: Plan; outcome: Outcome } | null>(null);
   const [showTables, setShowTables] = useState(false);
 
   // Jev.
@@ -416,6 +423,47 @@ export default function CdeLab() {
     };
   }, [world]);
 
+  // The model view: three.js loads only when it's first opened, then stays.
+  useEffect(() => {
+    if (view !== 'model' || modelRef.current) return;
+    let alive = true;
+    import('./view3d').then(({ Model3D }) => {
+      if (!alive || !canvas3dRef.current || !labels3dRef.current) return;
+      const getFrame = (): Frame3D | null => {
+        const f = frameRef.current;
+        if (!f) return null;
+        return {
+          world: f.world,
+          plan: f.plan,
+          est: f.est,
+          layers: f.layers,
+          circleR: f.circleR,
+          outcome: f.outcome,
+          strike: (() => {
+            const st = strikeRef.current;
+            const t = sceneRef.current?.strikeTime();
+            return st && t != null ? { plan: st.plan, outcome: st.outcome, t } : null;
+          })(),
+          walkers: sceneRef.current?.crowd.visible() ?? [],
+        };
+      };
+      modelRef.current = new Model3D(canvas3dRef.current, labels3dRef.current, world, getFrame);
+      setModelReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [view, world]);
+  useEffect(() => {
+    const m = modelRef.current;
+    if (!m) return;
+    m.resize();
+    const ro = new ResizeObserver(() => m.resize());
+    ro.observe(canvas3dRef.current!);
+    return () => ro.disconnect();
+  }, [modelReady]);
+  useEffect(() => () => modelRef.current?.dispose(), []);
+
   // Smoothly move the camera toward a focus.
   const focusRef = useRef<{ cx: number; cy: number; zoom: number } | null>(null);
   useEffect(() => {
@@ -566,10 +614,12 @@ export default function CdeLab() {
     focusRef.current = { cx: plan.aimX, cy: plan.aimY + 10, zoom: 1.9 };
     s.onImpact = (o) => setOutcome(o);
     s.onSettled = () => setStriking(false);
-    s.strike(plan, popNow, Math.floor(Math.random() * 1e9));
+    const o = s.strike(plan, popNow, Math.floor(Math.random() * 1e9));
+    strikeRef.current = { plan, outcome: o };
   };
   const resetTown = () => {
     sceneRef.current?.clearStrike();
+    strikeRef.current = null;
     setOutcome(null);
     setStriking(false);
     focusRef.current = { cx: 225, cy: 150, zoom: 1.3 };
@@ -646,6 +696,10 @@ export default function CdeLab() {
               onPointerLeave={() => setHover(null)}
               aria-label="A paper model of a town, seen from above"
             />
+            <canvas ref={canvas3dRef} className={`cde-canvas3d ${view === 'model' ? 'on' : ''}`} aria-label="The paper town as a tilted model" />
+            <div ref={labels3dRef} className={`cde3-labels ${view === 'model' ? 'on' : ''}`} />
+            {view === 'model' && <div className="cde-tilt" aria-hidden />}
+            {view === 'model' && !modelReady && <div className="cde-loading">Folding the town…</div>}
             <div className="cde-when">
               <b>{partOfDay(shownPlan.hour)}</b>
               <span>{fmtHour(shownPlan.hour)}</span>
@@ -804,6 +858,21 @@ export default function CdeLab() {
             )}
 
             <div className="cde-bar">
+              <span className="cde-view">
+                <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>
+                  Map
+                </button>
+                <button
+                  className={view === 'model' ? 'on' : ''}
+                  onClick={() => {
+                    // The model is for looking: clear the cards out of the way the first time.
+                    if (view !== 'model' && !modelRef.current) setShowCards(false);
+                    setView('model');
+                  }}
+                >
+                  Model
+                </button>
+              </span>
               {(
                 [
                   ['people', 'People inside'],
@@ -820,6 +889,13 @@ export default function CdeLab() {
               <button className={`cde-chip ${showCards ? 'on' : ''}`} onClick={() => setShowCards(!showCards)}>
                 Cards
               </button>
+              {view === 'model' ? (
+                <span className="cde-zoom">
+                  <button onClick={() => modelRef.current?.preset('drone')}>Drone</button>
+                  <button onClick={() => modelRef.current?.preset('street')}>Street</button>
+                  <button onClick={() => modelRef.current?.preset('top')}>Top</button>
+                </span>
+              ) : (
               <span className="cde-zoom">
                 <button onClick={() => (focusRef.current = { ...sceneRef.current!.view, zoom: sceneRef.current!.view.zoom * 1.35 })} aria-label="Zoom in">
                   +
@@ -829,6 +905,7 @@ export default function CdeLab() {
                 </button>
                 <button onClick={() => (focusRef.current = { cx: 225, cy: 150, zoom: 1.3 })}>Fit</button>
               </span>
+              )}
             </div>
           </div>
         </section>

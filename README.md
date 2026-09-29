@@ -31,7 +31,7 @@ The anon key is meant to be public; row level security in the schema lets anyone
 
 ## Routes
 
-`/g/<code>` a shared gradient, shown full size on the landing page (served by `api/share.ts` so link cards show its preview image) · `/` landing page (the Describe box repaints the hero with Claude) · `/studio` the app, signed-in only when Supabase is configured (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt) · `/cde` CDE Lab, an interactive paper-model explainer of collateral damage estimation, with Jev, an auto-analyst that sweeps plans in parallel web workers (`src/cde/`)
+`/g/<code>` a shared gradient, shown full size on the landing page (served by `api/share.ts` so link cards show its preview image) · `/` landing page (the Describe box repaints the hero with Claude) · `/studio` the app, signed-in only when Supabase is configured (`/studio#g=…` opens a shared gradient, `/studio?describe=…` runs a Describe prompt) · `/cde` CDE Lab, an interactive paper-model explainer of collateral damage estimation, with Jev, an auto-analyst that sweeps plans in parallel web workers, and a three.js Model view of the same town that loads only when opened (`src/cde/`)
 
 ## What's in v0.3
 
