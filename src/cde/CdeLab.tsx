@@ -14,9 +14,11 @@ import {
   HARDNESS,
   inCircle,
   partOfDay,
+  placeName,
   population,
   RULES,
   shownCount,
+  sources,
   WEAPONS,
   weapon,
   type Candidate,
@@ -24,6 +26,7 @@ import {
   type Observations,
   type Plan,
   type Scored,
+  type Sources,
   type WeaponId,
 } from './model';
 import { CdeScene, type Frame, type Outcome } from './scene';
@@ -50,7 +53,12 @@ interface Chapter {
   plan?: Partial<Plan>;
   layers?: Partial<Layers>;
   focus?: { cx: number; cy: number; zoom: number };
+  hist?: HistMode; // which reading of the histogram to show
+  tables?: boolean; // show the blast and fragment tables
+  count?: boolean; // open "People inside right now" on a block of flats
 }
+
+type HistMode = 'spread' | 'figure' | 'thresholds';
 
 const CHAPTERS: Chapter[] = [
   {
@@ -67,22 +75,29 @@ const CHAPTERS: Chapter[] = [
     focus: { cx: 225, cy: 150, zoom: 1.3 },
   },
   {
+    title: 'The tables',
+    text: 'How far each weapon throws blast and fragments comes from thick books of tables, built from tests and past strikes and reportedly reissued at least twice a year. These are made-up stand-ins.',
+    tables: true,
+  },
+  {
     title: 'The weapon',
     text: 'Warhead size, fuze, the direction the bomb arrives from and the exact aim point each change who is in reach. Fragments lean the way the bomb is travelling.',
     layers: { circle: true, pattern: true, impacts: false, people: false },
     focus: { cx: 225, cy: 150, zoom: 1.6 },
   },
   {
-    title: 'Managing chance',
-    text: 'Bombs do not land exactly where they are aimed. So the model is run hundreds of times, each with a different landing spot. The red dots are where it might land.',
-    layers: { circle: false, pattern: true, impacts: true, people: false },
-    focus: { cx: 225, cy: 130, zoom: 3.2 },
-  },
-  {
     title: 'Who is there',
-    text: 'Pattern of life: at 10am the school is full and the homes are half empty. Each dot is a person the model expects. Every change reruns the estimate.',
+    text: 'Nobody knows exactly. Overhead images, phone signals and an old census all disagree. Click any building to see its sources; each dot is a person the model expects.',
     layers: { circle: false, pattern: true, impacts: false, people: true },
     focus: { cx: 225, cy: 150, zoom: 1.8 },
+    count: true,
+  },
+  {
+    title: 'Managing chance',
+    text: 'Bombs do not land exactly where they are aimed, and the counts are guesses. So the model is run hundreds of times. Most runs are low; a few are much worse.',
+    layers: { circle: false, pattern: true, impacts: true, people: true },
+    focus: { cx: 225, cy: 140, zoom: 2.2 },
+    hist: 'spread',
   },
   {
     title: 'Ways to reduce the harm',
@@ -90,11 +105,13 @@ const CHAPTERS: Chapter[] = [
     plan: { weapon: 'small', fuze: 'delay', heading: 0, hour: 2 },
     layers: { circle: false, pattern: true, impacts: true, people: true },
     focus: { cx: 225, cy: 150, zoom: 1.8 },
+    hist: 'spread',
   },
   {
     title: 'Who signs off',
-    text: 'The higher the planning figure, the more senior the person who must approve. The thresholds have changed from war to war; two reported ones are marked on the chart.',
+    text: 'The spread is boiled down to one cautious figure: nine in ten runs come in at or below it. The higher it is, the more senior the person who must approve. The thresholds have changed from war to war.',
     layers: { circle: false, pattern: true, impacts: false, people: true },
+    hist: 'thresholds',
   },
   {
     title: 'One roll of the dice',
@@ -131,6 +148,8 @@ export default function CdeLab() {
   const [aimDrag, setAimDrag] = useState(false);
   const [dayPlay, setDayPlay] = useState(false);
   const [showCards, setShowCards] = useState(true);
+  const [histMode, setHistMode] = useState<HistMode>('figure');
+  const [showTables, setShowTables] = useState(false);
 
   // Jev.
   const [jevStatus, setJevStatus] = useState<JevStatus>({ running: false, done: 0, total: 0, inflight: 0, workers: 0, rate: 0 });
@@ -368,6 +387,7 @@ export default function CdeLab() {
     ghost: following ? null : ghostPlan,
     spotMode,
     hover,
+    selected: pop?.bid ?? null,
     outcome,
     aimDrag,
   };
@@ -377,6 +397,8 @@ export default function CdeLab() {
     const scene = new CdeScene(canvas, world);
     sceneRef.current = scene;
     scene.resize();
+    // Phones: start closer in, on the target and the school.
+    if (canvas.clientWidth < 600) scene.view = { cx: 225, cy: 158, zoom: 2.4 };
     const ro = new ResizeObserver(() => scene.resize());
     ro.observe(canvas);
     let raf = 0;
@@ -428,8 +450,7 @@ export default function CdeLab() {
     const w = s.toWorld(p.x, p.y);
     focusRef.current = null;
     if (spotMode) {
-      const b = s.buildingAt(w.x, w.y);
-      if (b) setPop({ bid: b.id, x: p.x, y: p.y, n: obs[b.id] ?? shownCount(popNow, b) });
+      openPeople(w.x, w.y, p.x, p.y);
       return;
     }
     const { s: sc } = s.cam();
@@ -463,9 +484,24 @@ export default function CdeLab() {
       setHover(b && (spotMode || b.id === world.targetId) ? b.id : null);
     }
   };
-  const onUp = () => {
+  const onUp = (e: React.PointerEvent) => {
+    const d = drag.current;
     drag.current = null;
     setAimDrag(false);
+    // A click (not a drag) on a building: who is inside right now?
+    const s = sceneRef.current;
+    if (d?.mode === 'pan' && s && e.type === 'pointerup') {
+      const p = localXY(e);
+      if (Math.hypot(p.x - d.x, p.y - d.y) < 5) {
+        const w = s.toWorld(p.x, p.y);
+        openPeople(w.x, w.y, p.x, p.y);
+      }
+    }
+  };
+  const openPeople = (wx: number, wy: number, px: number, py: number) => {
+    const b = sceneRef.current?.buildingAt(wx, wy);
+    if (!b || b.id === world.targetId) return setPop(null);
+    setPop({ bid: b.id, x: px, y: py, n: obs[b.id] ?? shownCount(popNow, b) });
   };
   useEffect(() => {
     const c = canvasRef.current!;
@@ -498,6 +534,22 @@ export default function CdeLab() {
     if (ch.plan) setPlan({ ...ch.plan, aimX: target.cx, aimY: target.cy });
     if (ch.layers) setLayers((l) => ({ ...l, ...ch.layers }));
     if (ch.focus) window.setTimeout(() => (focusRef.current = ch.focus!), 900);
+    setHistMode(ch.hist ?? 'figure');
+    setShowTables(!!ch.tables);
+    setPop(null);
+    if (ch.count) {
+      // Open the sources for the biggest block of flats near the target, once the camera has settled.
+      const flats = world.buildings
+        .filter((b) => b.kind === 'home' && Math.hypot(b.cx - target.cx, b.cy - target.cy) < 90)
+        .sort((a, b) => b.area - a.area)[0];
+      if (flats)
+        window.setTimeout(() => {
+          const s = sceneRef.current;
+          if (!s) return;
+          const { s: sc, ox, oy } = s.cam();
+          setPop({ bid: flats.id, x: flats.cx * sc + ox, y: flats.cy * sc + oy, n: shownCount(popNow, flats) });
+        }, 2600);
+    }
     setOutcome(null);
   };
 
@@ -611,7 +663,43 @@ export default function CdeLab() {
                   signoff={`${signoff.who}`}
                   signLevel={signoff.level}
                 />
-                {est && <Histogram est={est} rules={rules} computing={computing} aside={following} />}
+                {est && histMode !== 'spread' && <ApproveCard level={signoff.level} figure={est.p90} rules={rules} />}
+                {est && <Histogram est={est} rules={rules} computing={computing} aside={following} mode={histMode} onMode={setHistMode} />}
+              </div>
+            )}
+
+            {showTables && (
+              <div className="cde-tables">
+                <TablesScene />
+                <div className="cde-card cde-table">
+                  <h4>Blast and fragments</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Weapon</th>
+                        <th>Blast</th>
+                        <th>Fragments</th>
+                        <th>Half land within</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {WEAPONS.map((wp) => (
+                        <tr key={wp.id} className={wp.id === plan.weapon ? 'on' : ''} onClick={() => setPlan({ weapon: wp.id })}>
+                          <td>{wp.name}</td>
+                          <td>{wp.blast} m</td>
+                          <td>{wp.frag} m</td>
+                          <td>{wp.cep} m</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="cde-hint">Illustrative numbers, invented for this model. Real tables are classified. Click a row to choose that weapon.</p>
+                  {chapter == null && (
+                    <button className="cde-link" onClick={() => setShowTables(false)}>
+                      Close the tables
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -668,11 +756,18 @@ export default function CdeLab() {
             )}
 
             {pop && (
-              <div className="cde-pop" style={{ left: Math.min(pop.x, (canvasRef.current?.clientWidth ?? 400) - 230), top: pop.y + 12 }}>
-                <b>{kindName(world.buildings[pop.bid].kind)}</b>
+              <div
+                className="cde-card cde-pop"
+                style={{
+                  left: Math.max(10, Math.min(pop.x + 24, (canvasRef.current?.clientWidth ?? 400) - 330)),
+                  top: Math.max(10, Math.min(pop.y - 40, (canvasRef.current?.clientHeight ?? 600) - 330)),
+                }}
+              >
+                <h4>People inside right now</h4>
                 <span>
-                  The model expects {Math.round(popNow.expected[pop.bid])} at {fmtHour(plan.hour)}
+                  {placeName(world.buildings[pop.bid])} · {fmtHour(plan.hour)}
                 </span>
+                <SourceBars s={sources(world, popNow, world.buildings[pop.bid])} onUse={(n) => setPop({ ...pop, n })} />
                 <div className="cde-stepper">
                   <button onClick={() => setPop({ ...pop, n: Math.max(0, pop.n - 1) })}>−</button>
                   <em>{pop.n} seen</em>
@@ -779,6 +874,9 @@ export default function CdeLab() {
             </div>
             <Seg value={plan.fuze} onChange={(fuze) => setPlan({ fuze })} options={FUZES.map((f) => [f.id, f.name] as [typeof f.id, string])} />
             <p className="cde-hint">{FUZES.find((f) => f.id === plan.fuze)!.note}</p>
+            <button className="cde-link" onClick={() => setShowTables(!showTables)}>
+              {showTables ? 'Close the tables' : 'Open the blast and fragment tables'}
+            </button>
           </Group>
 
           <Group n={3} title="Direction and aim">
@@ -828,7 +926,7 @@ export default function CdeLab() {
                 </button>
               )}
             </div>
-            {spotMode && <p className="cde-hint">Click any building to log how many people were seen inside. Logged counts replace the model's guess (blue dots).</p>}
+            {spotMode && <p className="cde-hint">Click any building to compare what overhead images, phone signals and the census say, and log a count. Logged counts replace the model's guess (blue dots).</p>}
           </Group>
 
           <Group n={5} title="Who signs off">
@@ -1000,7 +1098,29 @@ export default function CdeLab() {
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const describe = (c: Candidate) => `${weapon(c.weapon).short}, ${FUZES.find((f) => f.id === c.fuze)!.name.toLowerCase()} fuze, heading ${compass(c.heading)}, aim ${c.aim}, ${fmtHour(c.hour)}`;
-const kindName = (k: string) => ({ home: 'Home', shop: 'Shop', school: 'School', warehouse: 'Warehouse (the target)', clinic: 'Clinic', market: 'Market stalls' })[k] ?? k;
+function SourceBars({ s, onUse }: { s: Sources; onUse: (n: number) => void }) {
+  const rows: [string, number, string][] = [
+    ['Overhead images', s.overhead, 'Only people outside or at a window'],
+    ['Phone signals', s.phones, 'Not everyone carries one'],
+    ['Census, years old', s.census, 'Who lived here, not who is here now'],
+    ["The model's guess", s.model, 'Pattern of life at this hour'],
+  ];
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return (
+    <div className="cde-sources">
+      {rows.map(([name, v, note], i) => (
+        <button key={name} className={i === 2 ? 'old' : i === 3 ? 'model' : ''} onClick={() => onUse(v)} title={`${note}. Click to use ${v}.`}>
+          <span>{name}</span>
+          <span className="bar">
+            <i style={{ width: `${(v / max) * 100}%` }} />
+            <b>{v}</b>
+          </span>
+        </button>
+      ))}
+      <small>The sources disagree. Click one to use its count, or set your own.</small>
+    </div>
+  );
+}
 
 function Group({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
@@ -1066,7 +1186,22 @@ function Checklist(p: { lawful: boolean; circle: string; weaponLine: string; red
   );
 }
 
-function Histogram({ est, rules, computing, aside }: { est: Estimate; rules: (typeof RULES)[number]; computing: boolean; aside: boolean }) {
+/** A caption box inside an SVG chart, in the explainer's style. */
+function Box({ x, y, text, anchor = 'middle', tone = 'ink', size = 11 }: { x: number; y: number; text: string; anchor?: 'start' | 'middle' | 'end'; tone?: 'ink' | 'brick'; size?: number }) {
+  const w = text.length * size * 0.56 + 12;
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2;
+  return (
+    <g className={`box ${tone}`}>
+      <rect x={left + 1.5} y={y - size - 3.5} width={w} height={size + 9} className="shadow" />
+      <rect x={left} y={y - size - 5} width={w} height={size + 9} />
+      <text x={left + w / 2} y={y} textAnchor="middle" style={{ fontSize: size }}>
+        {text}
+      </text>
+    </g>
+  );
+}
+
+function Histogram({ est, rules, computing, aside, mode, onMode }: { est: Estimate; rules: (typeof RULES)[number]; computing: boolean; aside: boolean; mode: HistMode; onMode: (m: HistMode) => void }) {
   // Up to 30 people, one bar each; beyond that, bars of 2, 5 or 10 people.
   const step = [1, 2, 5, 10].find((k) => est.max / k <= 32) ?? 20;
   const maxX = Math.max(30, Math.ceil((est.max + 1) / (step * 5)) * step * 5);
@@ -1078,35 +1213,73 @@ function Histogram({ est, rules, computing, aside }: { est: Estimate; rules: (ty
   const H = 150;
   const bw = W / nb;
   const x = (v: number) => (v / step + 0.5) * bw;
+  const barTop = (i: number) => H - (bins[i] / peak) * (H - 8);
   const tickStep = maxX <= 30 ? 5 : maxX <= 60 ? 10 : maxX <= 150 ? 25 : 50;
   const ticks = Array.from({ length: Math.floor(maxX / tickStep) + 1 }, (_, i) => i * tickStep);
+  // "Most runs": the low cluster, up to the median.
+  const low = est.p50;
+  let lowRuns = 0;
+  for (const c of est.counts) if (c <= low) lowRuns++;
+  const maxBin = Math.min(nb - 1, Math.floor(est.max / step));
+  const barClass = (i: number) => (mode === 'spread' ? (i * step <= low ? 'in' : 'out') : 'grey');
   return (
-    <div className={`cde-card cde-hist ${computing ? 'busy' : ''} ${aside ? 'aside' : ''}`}>
+    <div className={`cde-card cde-hist ${computing ? 'busy' : ''} ${aside ? 'aside' : ''} mode-${mode}`}>
       <div className="cde-hist-head">
         <h4>{aside ? 'Your plan, while Jev tests others' : 'Our model: killed or badly hurt'}</h4>
         <span className="mono">{est.runs} runs</span>
       </div>
-      <svg viewBox={`-6 -34 ${W + 12} ${H + 66}`} role="img" aria-label={`Histogram of ${est.runs} runs. Median ${est.p50}, planning figure ${est.p90}.`}>
-        {RULES.map((r, i) => {
-          if (r.senior > maxX) return null;
-          const on = r.id === rules.id;
-          return (
-            <g key={r.id} className={on ? 'rule on' : 'rule'}>
-              <line x1={x(r.senior)} x2={x(r.senior)} y1={-12 + i * 16} y2={H} />
-              <circle cx={x(r.senior)} cy={-12 + i * 16} r={2.2} />
-              <text x={x(r.senior) + (r.senior > maxX * 0.6 ? -4 : 4)} y={-8 + i * 16} textAnchor={r.senior > maxX * 0.6 ? 'end' : 'start'}>
-                {r.name}: {r.senior}
-              </text>
-            </g>
-          );
-        })}
-        {bins.map((b, i) => (
-          <rect key={i} x={i * bw + 0.6} width={Math.max(0.5, bw - 1.2)} y={H - (b / peak) * (H - 8)} height={(b / peak) * (H - 8)} className={i * step <= est.p90 ? 'in' : 'out'} />
+      <svg viewBox={`-6 -40 ${W + 12} ${H + 72}`} role="img" aria-label={`Histogram of ${est.runs} runs. ${lowRuns} runs at ${low} or fewer. Cautious figure ${est.p90}. Worst run ${est.max}.`}>
+        {mode === 'spread' && (
+          <text x={W / 2} y={-26} textAnchor="middle" className="sub">
+            {lowRuns} of {est.runs} runs: {low === 0 ? 'none' : `${low} or fewer`}
+          </text>
+        )}
+        {bins.map((_, i) => (
+          <rect key={i} x={i * bw + 0.6} width={Math.max(0.5, bw - 1.2)} y={barTop(i)} height={H - barTop(i)} className={barClass(i)} />
         ))}
-        <g className="fig">
-          <line x1={x(est.p90)} x2={x(est.p90)} y1={-30} y2={H} />
-          <path d={`M${x(est.p90) - 5},-32 L${x(est.p90) + 5},-32 L${x(est.p90)},-24 Z`} />
-        </g>
+        {mode === 'spread' && (
+          <>
+            {bins[0] > 0 && (
+              <g className="lead">
+                <line x1={x(0)} x2={x(0)} y1={-2} y2={barTop(0)} />
+                <circle cx={x(0)} cy={barTop(0)} r={2} />
+                <Box x={x(0) - 4} y={-4} text="None" anchor="start" size={12} />
+              </g>
+            )}
+            {est.max > 0 && (
+              <g className="lead">
+                <line x1={x(maxBin * step)} x2={x(maxBin * step)} y1={18} y2={H} />
+                <circle cx={x(maxBin * step)} cy={H} r={2} />
+                <Box x={x(maxBin * step)} y={20} text={String(est.max)} size={12} />
+              </g>
+            )}
+          </>
+        )}
+        {mode === 'thresholds' &&
+          RULES.map((r, i) => {
+            if (r.senior > maxX) return null;
+            const right = r.senior > maxX * 0.6;
+            return (
+              <g key={r.id} className={r.id === rules.id ? 'rule on' : 'rule'}>
+                <line x1={x(r.senior)} x2={x(r.senior)} y1={-24 + i * 24} y2={H} />
+                <circle cx={x(r.senior)} cy={-24 + i * 24} r={2.2} />
+                <Box x={x(r.senior) + (right ? 6 : -4)} y={-14 + i * 24 + 16} text={`${r.name}: ${r.senior}`} anchor={right ? 'end' : 'start'} size={11} />
+              </g>
+            );
+          })}
+        {mode !== 'spread' && (
+          <g className="fig">
+            <line x1={x(est.p90)} x2={x(est.p90)} y1={-34} y2={H} />
+            <path d={`M${x(est.p90) - 5},-38 L${x(est.p90) + 5},-38 L${x(est.p90)},-30 Z`} />
+            {mode === 'figure' && (
+              <>
+                <line x1={x(est.p90) - 12} x2={x(est.p90)} y1={20} y2={20} />
+                <circle cx={x(est.p90)} cy={20} r={2} />
+                <Box x={x(est.p90) - 12} y={25} text={`One cautious figure: ${est.p90}`} anchor="end" tone="brick" size={11.5} />
+              </>
+            )}
+          </g>
+        )}
         <line x1={0} x2={W} y1={H} y2={H} className="axis" />
         {ticks.map((t) => (
           <text key={t} x={x(t)} y={H + 16} textAnchor="middle" className="tick">
@@ -1117,14 +1290,90 @@ function Histogram({ est, rules, computing, aside }: { est: Estimate; rules: (ty
           people
         </text>
       </svg>
+      {mode === 'thresholds' && <div className="cde-hist-caption">Thresholds for senior approval, reportedly</div>}
       <div className="cde-hist-foot">
         <span>
-          <i className="sw in" /> 9 in 10 runs · planning figure <b>{est.p90}</b>
-        </span>
-        <span>
-          median <b>{est.p50}</b> · target destroyed <b>{pct(est.pk)}</b>
+          nine in ten runs at or below <b>{est.p90}</b> · median <b>{est.p50}</b> · target destroyed <b>{pct(est.pk)}</b>
         </span>
       </div>
+      <div className="cde-hist-tabs" role="tablist">
+        {(
+          [
+            ['spread', 'The spread'],
+            ['figure', 'One figure'],
+            ['thresholds', 'Thresholds'],
+          ] as [HistMode, string][]
+        ).map(([m, name]) => (
+          <button key={m} className={mode === m ? 'on' : ''} onClick={() => onMode(m)} role="tab" aria-selected={mode === m}>
+            {name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ApproveCard({ level, figure, rules }: { level: number; figure: number; rules: (typeof RULES)[number] }) {
+  const rows = ['Most senior', 'More senior', 'Senior'];
+  return (
+    <div className="cde-card cde-approve">
+      <h4>Who must approve</h4>
+      {rows.map((r, i) => (
+        <div key={r} className={3 - i === level ? 'on' : ''}>
+          {r}
+        </div>
+      ))}
+      <small>{level === 0 ? 'No civilian harm expected: the strike cell signs.' : `Figure ${figure}; senior sign-off at ${rules.senior} (${rules.name})`}</small>
+    </div>
+  );
+}
+
+/** A stack of paper books on a desk, with a pencil: the tables. */
+function TablesScene() {
+  return (
+    <div className="cde-desk" aria-hidden>
+      <svg viewBox="0 0 400 260">
+        <defs>
+          <linearGradient id="wood" x1="0" x2="1">
+            <stop offset="0" stopColor="#c98a4b" />
+            <stop offset="0.5" stopColor="#b8773c" />
+            <stop offset="1" stopColor="#d49a5c" />
+          </linearGradient>
+          <linearGradient id="cover" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor="#dedbd4" />
+            <stop offset="1" stopColor="#c9c5bc" />
+          </linearGradient>
+        </defs>
+        <rect width="400" height="260" fill="url(#wood)" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <path key={i} d={`M0 ${18 + i * 30} Q200 ${10 + i * 30 + (i % 2) * 14} 400 ${22 + i * 30}`} stroke="rgba(90,50,20,0.18)" fill="none" />
+        ))}
+        <polygon points="20,20 390,8 396,250 12,254" fill="#f4f0e6" />
+        <polygon points="20,20 390,8 396,90 12,120" fill="rgba(60,40,20,0.08)" />
+        {[2, 1, 0].map((k) => (
+          <g key={k} transform={`translate(${96 + k * 3},${108 - k * 16})`}>
+            <polygon points="0,40 150,22 196,56 46,78" fill="#8f8a80" transform="translate(4,8)" opacity="0.35" />
+            <polygon points="0,40 46,78 46,92 0,54" fill="#e9e6de" />
+            <polygon points="46,78 196,56 196,70 46,92" fill="#f7f5f0" />
+            {Array.from({ length: 5 }, (_, j) => (
+              <line key={j} x1={50 + j * 28} y1={82 - j * 4} x2={70 + j * 28} y2={79 - j * 4} stroke="#9a958b" strokeWidth="0.6" />
+            ))}
+            <polygon points="0,40 150,22 196,56 46,78" fill="url(#cover)" stroke="#8f8a80" strokeWidth="0.6" />
+          </g>
+        ))}
+        <g transform="translate(270,150) rotate(-18)">
+          <rect width="110" height="7" fill="#1f3a2c" />
+          <polygon points="0,0 -16,3.5 0,7" fill="#e3c9a0" />
+          <polygon points="-11,2.3 -16,3.5 -11,4.7" fill="#2a2520" />
+          <rect x="104" width="9" height="7" fill="#c9a44c" />
+          <rect x="113" width="8" height="7" fill="#e28b8b" rx="1.5" />
+        </g>
+        <rect x="300" y="186" width="30" height="20" rx="4" fill="#efe9dc" transform="rotate(-12 315 196)" />
+        <line x1="171" y1="130" x2="171" y2="40" stroke="#231f1a" strokeWidth="1.2" />
+        <circle cx="171" cy="130" r="2.5" fill="#231f1a" />
+      </svg>
+      <span className="cde-desk-label">Tables for blast and fragments</span>
+      <span className="cde-desk-note">Reissued at least twice a year, reportedly</span>
     </div>
   );
 }

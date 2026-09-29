@@ -709,3 +709,33 @@ export function partOfDay(h: number) {
   if (h < 18) return 'In the afternoon';
   return 'At dusk';
 }
+
+// ---------------------------------------------------------------- where the counts come from
+
+export interface Sources {
+  overhead: number; // people seen from above: only those outside or at windows
+  phones: number; // phone signals: not everyone carries one, some carry two
+  census: number; // who lived here years ago, whatever the hour
+  model: number; // the pattern-of-life guess the estimate uses
+}
+
+/** Three rough, disagreeing counts for one building at one hour, as an analyst might have them. */
+export function sources(world: World, pop: Population, b: Building): Sources {
+  const r = rng(world.seed * 1009 + b.id * 131 + Math.round(pop.hour * 2));
+  const e = pop.expected[b.id];
+  const jitter = (v: number, k: number) => Math.max(0, Math.round(v * (1 + (r() - 0.5) * k)));
+  const outside = pop.hour >= 7 && pop.hour <= 19 ? 0.5 : 0.25;
+  return {
+    overhead: jitter(e * outside, 0.6),
+    phones: jitter(e * 0.8, 0.5),
+    census: b.kind === 'home' ? jitter(b.capacity * 0.95, 0.3) : jitter(b.capacity * 0.6, 0.3),
+    model: Math.round(e),
+  };
+}
+
+export function placeName(b: Building) {
+  if (b.label) return b.label;
+  if (b.kind === 'shop') return 'A row of shops';
+  if (b.kind === 'home') return b.area > 380 ? 'One block of flats' : 'A family house';
+  return b.kind;
+}

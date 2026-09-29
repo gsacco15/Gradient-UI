@@ -6,6 +6,7 @@ import {
   harm,
   inBuilding,
   lobe,
+  placeName,
   rng,
   shownCount,
   weapon,
@@ -43,6 +44,7 @@ export interface Frame {
   ghost: Plan | null; // what Jev is trying right now
   spotMode: boolean;
   hover: number | null; // building under the pointer
+  selected: number | null; // building whose people are being counted
   outcome: Outcome | null; // after the strike
   aimDrag: boolean;
 }
@@ -807,6 +809,26 @@ export class CdeScene {
         g.arc(b.cx, b.cy, 2.2 * px, 0, Math.PI * 2);
         g.fill();
         label(g, lx, ly, b.label, px, {});
+      }
+    }
+
+    // The building being counted: outlined and named, like a caption on the model.
+    if (f.selected != null) {
+      const b = this.world.buildings[f.selected];
+      if (!b.label) {
+        const top = Math.min(...b.rects.map((q) => q.y));
+        g.strokeStyle = C.ink;
+        g.lineWidth = 1.2 * px;
+        for (const q of b.rects) g.strokeRect(q.x - 0.8, q.y - 0.8, q.w + 1.6, q.h + 1.6);
+        g.beginPath();
+        g.moveTo(b.cx, top - 8);
+        g.lineTo(b.cx, b.cy);
+        g.stroke();
+        g.fillStyle = C.ink;
+        g.beginPath();
+        g.arc(b.cx, b.cy, 2.2 * px, 0, Math.PI * 2);
+        g.fill();
+        label(g, b.cx, top - 8, placeName(b), px, {});
       }
     }
 

@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { approver, best, buildWorld, candidates, estimate, harm, effect, HARDNESS, inCircle, lobe, population, RULES, type Plan, type Scored } from './model';
+import { approver, best, buildWorld, candidates, estimate, harm, effect, HARDNESS, inCircle, lobe, placeName, population, RULES, sources, type Plan, type Scored } from './model';
 import { score } from './worker';
+
+describe('cde sources', () => {
+  const flats = () => buildWorld(7).buildings.filter((b) => b.kind === 'home').sort((a, b) => b.area - a.area)[0];
+  it('gives disagreeing counts, with the census blind to the hour', () => {
+    const w = buildWorld(7);
+    const b = flats();
+    const day = sources(w, population(w, 11, 6), b);
+    const night = sources(w, population(w, 2, 6), b);
+    expect(night.model).toBeGreaterThan(day.model);
+    expect(night.overhead).toBeLessThanOrEqual(night.phones + 1);
+    expect(night.census).toBeGreaterThan(night.overhead);
+    expect(sources(w, population(w, 2, 6), b)).toEqual(night);
+    expect(placeName(b)).toMatch(/flats|house/);
+  });
+});
 
 const world = buildWorld(7);
 const t = world.buildings[world.targetId];

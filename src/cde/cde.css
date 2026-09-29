@@ -265,3 +265,72 @@
   .cde-dir { grid-template-columns: 110px 1fr; }
   .cde-dial { width: 110px; height: 110px; }
 }
+
+/* ---------------------------------------------------------------- histogram readings */
+.cde-hist rect.grey { fill: #b8b0a6; }
+.cde-hist .sub { font: 600 12px var(--plex); fill: var(--brick); }
+.cde-hist .lead line { stroke: #231f1a; stroke-width: 1; }
+.cde-hist .lead circle { fill: #231f1a; }
+.cde-hist .box rect { fill: #fbf8f1; stroke: rgba(35, 31, 26, 0.12); stroke-width: 0.6; }
+.cde-hist .box rect.shadow { fill: rgba(40, 30, 20, 0.14); stroke: none; }
+.cde-hist .box text { font-family: var(--plex); font-weight: 600; fill: #231f1a; }
+.cde-hist .box.brick text { fill: var(--brick); }
+.cde-hist .fig line + line { stroke-width: 1; }
+.cde-hist-caption { display: table; margin: 2px auto 6px; padding: 5px 10px; background: #fbf8f1; font-size: 12px; font-weight: 500; box-shadow: 2px 3px 0 rgba(40, 30, 20, 0.12); }
+.cde-hist-tabs { display: flex; gap: 2px; margin-top: 8px; padding: 2px; border-radius: 999px; background: var(--paper-2); }
+.cde-hist-tabs button { flex: 1; font: 500 11.5px var(--plex); padding: 5px 6px; border: 0; border-radius: 999px; background: none; color: #6d665d; cursor: pointer; }
+.cde-hist-tabs button.on { background: #231f1a; color: #fbf8f1; }
+
+/* Who must approve */
+.cde-approve { position: absolute; right: 388px; bottom: 64px; width: 176px; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.cde-approve h4 { font-size: 15px; margin-bottom: 4px; }
+.cde-approve div { padding: 9px 10px; text-align: center; font-size: 14px; font-weight: 500; color: #9a938a; background: #ece6da; transition: background 0.3s, color 0.3s; }
+.cde-approve div.on { background: #f1d9a8; color: var(--brick); font-weight: 600; }
+.cde-approve small { font-size: 11px; line-height: 1.35; color: #6d665d; }
+.cde-map:has(.cde-outcome) .cde-approve { display: none; }
+
+/* People inside right now */
+.cde-pop { width: 310px; padding: 14px 16px; gap: 8px; }
+.cde-pop h4 { font-size: 17px; }
+.cde-sources { display: flex; flex-direction: column; gap: 6px; }
+.cde-sources button { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 3px 4px; margin: 0 -4px; border: 0; background: none; cursor: pointer; font-family: var(--plex); color: #231f1a; border-radius: 6px; }
+.cde-sources button:hover { background: rgba(35, 31, 26, 0.05); }
+.cde-sources button > span:first-child { font-size: 13px; }
+.cde-sources .bar { display: flex; align-items: center; gap: 6px; }
+.cde-sources .bar i { display: block; height: 7px; background: #2a2520; min-width: 2px; transition: width 0.35s; }
+.cde-sources .bar b { font-size: 13px; font-weight: 600; }
+.cde-sources .old .bar i { background: #4f6478; }
+.cde-sources .model .bar i { background: var(--brick); }
+.cde-sources small { font-size: 11.5px; color: #6d665d; }
+
+/* The tables */
+.cde-tables { position: absolute; inset: 0; z-index: 2; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: center; padding: 24px; background: #b8773c; animation: cde-up 0.4s ease; }
+.cde-desk { position: relative; align-self: center; }
+.cde-desk svg { display: block; width: 100%; height: auto; box-shadow: 0 20px 40px -20px rgba(40, 20, 0, 0.6); }
+.cde-desk-label, .cde-desk-note { position: absolute; background: #fbf8f1; font: 600 15px var(--plex); padding: 6px 10px; box-shadow: 2px 3px 0 rgba(40, 30, 20, 0.14); white-space: nowrap; }
+.cde-desk-label { top: 6%; left: 28%; }
+.cde-desk-note { bottom: 8%; left: 30%; font-size: 13px; font-weight: 500; }
+.cde-table { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.cde-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cde-table th { text-align: left; font: 500 10.5px var(--plex-mono); text-transform: uppercase; letter-spacing: 0.06em; color: #6d665d; padding: 0 6px 6px 0; border-bottom: 1.5px solid #231f1a; }
+.cde-table td + td { white-space: nowrap; }
+.cde-table td { padding: 8px 6px 8px 0; border-bottom: 1px solid rgba(35, 31, 26, 0.12); font-variant-numeric: tabular-nums; }
+.cde-table tr { cursor: pointer; }
+.cde-table tr.on td { color: var(--brick); font-weight: 600; }
+.cde-table tbody tr:hover td { background: rgba(35, 31, 26, 0.04); }
+
+@media (max-width: 1100px) {
+  .cde-approve { right: 388px; }
+}
+@media (max-width: 760px) {
+  .cde-approve { position: static; flex: 0 0 180px; scroll-snap-align: start; }
+  .cde-pop { width: min(310px, calc(100% - 20px)); }
+  .cde-tables { grid-template-columns: 1fr; height: var(--mh); overflow-y: auto; padding: 14px; align-items: start; }
+  .cde-desk-label { font-size: 12px; }
+  .cde-desk-note { font-size: 11px; }
+}
+.cde-map:has(.cde-pop) .cde-approve { display: none; }
+.cde-map:has(.cde-caption) .cde-approve { bottom: auto; top: 16px; }
+@media (max-width: 760px) {
+  .cde-map:has(.cde-pop) .cde-approve { display: flex; }
+}
