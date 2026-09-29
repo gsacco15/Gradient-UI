@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // The studio and the Lab load their own code only when opened, so the home page stays light.
 const App = lazy(() => import('./App'));
 const LedLab = lazy(() => import('./led/LedLab'));
+const CdeLab = lazy(() => import('./cde/CdeLab'));
 import { usePath } from './router';
 import './styles.css';
 
@@ -22,9 +23,10 @@ function Root() {
   const share = /^\/g\/([A-Za-z0-9_-]{4,40})\/?$/.exec(path)?.[1];
   let page = <Landing key={share ?? 'home'} slug={share} />;
   if (/^\/led\/?$/.test(path)) page = <LedLab />;
+  if (/^\/cde\/?$/.test(path)) page = <CdeLab />;
   if (/^\/community\/?$/.test(path)) page = <CommunityPage />;
   if (/^\/privacy\/?$/.test(path)) page = <PrivacyPage />;
-  const known = path === '/' || studio || !!share || /^\/(led|community|privacy)\/?$/.test(path);
+  const known = path === '/' || studio || !!share || /^\/(led|cde|community|privacy)\/?$/.test(path);
   if (!known) page = <NotFoundPage />;
   if (studio) {
     page = <App />;
